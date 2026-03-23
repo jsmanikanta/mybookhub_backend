@@ -25,7 +25,7 @@ router.put("/update-status/:orderId", updatePrintStatus);
 router.put("/update-payment-status/:orderId", updatePaymentStatus);
 
 // books
-router.get("/books", getAllBooks);
+router.get("/", getAllBooks);
 router.patch("/book/:bookId/status", updateStatus);
 
 // category images
