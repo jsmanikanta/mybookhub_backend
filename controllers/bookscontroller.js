@@ -183,7 +183,7 @@ const Sellbook = async (req, res) => {
     `;
 
     const sellerEmailHtml = `
-      <h2>📚 Your Book Has Been Listed Successfully!</h2>
+      <h2> Your Book Has Been Listed Successfully!</h2>
 
       <p>Hello ${user.fullname || "User"},</p>
 

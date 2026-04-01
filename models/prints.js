@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+
 const printSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },

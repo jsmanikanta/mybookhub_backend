@@ -1,15 +1,14 @@
-const dotenv = require("dotenv");
+import dotenv from "dotenv";
 dotenv.config();
-
-const Prints = require("../models/prints");
-const Sellbooks = require("../models/sellbooks");
-const User = require("../models/user");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const express = require("express");
-const path = require("path");
-const { fileURLToPath } = require("url");
-const { Resend } = require("resend");
+import Prints from "../models/prints.js";
+import Sellbooks from "../models/sellbooks.js";
+import User from "../models/user.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();

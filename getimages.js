@@ -46,4 +46,3 @@ exports.getImages = async (req, res) => {
     });
   }
 };
-

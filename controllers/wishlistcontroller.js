@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
-import Wishlist from "../models/wishlist.js";
-import Sellbooks from "../models/sellbooks.js";
+const mongoose = require("mongoose");
+const Wishlist = require("../models/wishlist");
+const Sellbooks = require("../models/sellbooks");
 
 const addToWishlist = async (req, res) => {
   try {

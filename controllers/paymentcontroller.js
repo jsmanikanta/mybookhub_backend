@@ -1,8 +1,8 @@
-import Razorpay from "razorpay";
-import Payment from "../models/payments.js";
-import PrintsImport from "../models/prints.js";
-import crypto from "crypto";
-
+const Razorpay = require("razorpay");
+const Payment = require("../models/payments");
+const PrintsImport = require("../models/prints");
+const crypto = require("crypto");
+const user = require("../models/user");
 const Prints = PrintsImport.default || PrintsImport;
 
 function getEnvValue(primary, fallback) {
@@ -14,6 +14,9 @@ const RAZORPAY_KEY_SECRET = getEnvValue(
   "RAZORPAY_KEY_SECRET",
   "RAZORPAY_SECRET",
 );
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_PAYEMENTS);
 
 function hasRazorpayKeys() {
   return Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET);
@@ -265,6 +268,29 @@ const verifyPayment = async (req, res) => {
       printOrder.transactionId = razorpay_payment_id;
       await printOrder.save();
 
+      const paymentDetailsHtml = `
+  <h2>💰 Payment Successful</h2>
+
+  <h3>Payment Details:</h3>
+  <ul>
+    <li><b>Payment Method:</b> Razorpay</li>
+    <li><b>Payment Status:</b> <span style="color: green;"><b>PAID</b></span></li>
+    <li><b>Transaction ID:</b> ${printOrder.transactionId}</li>
+    <li><b>Razorpay Order ID:</b> ${printOrder.razorpayOrderId}</li>
+    <li><b>Razorpay Payment ID:</b> ${printOrder.razorpayPaymentId}</li>
+    <li><b>Amount:</b> ${printOrder.originalprice}</li>
+    <li><b>Discount:</b> ${Math.max(printOrder.originalprice - (printOrder.discountprice || printOrder.originalprice), 0)}</li>
+    <li><b>Final Paid Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
+    <li><b>Currency:</b> INR</li>
+  </ul>
+`;
+      await resend.emails.send({
+        from: "PrintKart <payments@mybookhub.store>",
+        to: user.email, // or admin mail
+        subject: "Payment Successful - PrintKart",
+        html: paymentDetailsHtml,
+      });
+
       return res.status(400).json({
         success: false,
         message: "Payment verification failed",
@@ -381,6 +407,31 @@ const paymentFailed = async (req, res) => {
     printOrder.paymentStatus = "failed";
     printOrder.razorpayOrderId = razorpayOrderId;
     await printOrder.save();
+
+    const paymentFailedHtml = `
+  <h2>❌ Payment Failed</h2>
+
+  <h3>Payment Details:</h3>
+  <ul>
+    <li><b>Payment Method:</b> Razorpay</li>
+    <li><b>Payment Status:</b> <span style="color: red;"><b>FAILED</b></span></li>
+    <li><b>Transaction ID:</b> ${printOrder.transactionId || "N/A"}</li>
+    <li><b>Razorpay Order ID:</b> ${printOrder.razorpayOrderId || "N/A"}</li>
+    <li><b>Razorpay Payment ID:</b> ${printOrder.razorpayPaymentId || "N/A"}</li>
+    <li><b>Amount:</b> ${printOrder.originalprice}</li>
+    <li><b>Discount:</b> ${Math.max(printOrder.originalprice - (printOrder.discountprice || printOrder.originalprice), 0)}</li>
+    <li><b>Final Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
+    <li><b>Currency:</b> INR</li>
+  </ul>
+
+  <p>Please try the payment again.</p>
+`;
+    await resend.emails.send({
+      from: "PrintKart <admin@mybookhub.store>",
+      to: [user.email, "admin@mybookhub.store"],
+      subject: "Payment Failed - PrintKart",
+      html: paymentFailedHtml,
+    });
 
     return res.status(200).json({
       success: true,

@@ -1,11 +1,10 @@
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import cloudinary from "cloudinary";
-import streamifier from "streamifier";
-
-import PrintsImport from "../models/prints.js";
-import SellbooksImport from "../models/sellbooks.js";
-import BookCategoryImageImport from "../models/categeory.js";
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const cloudinary = require("cloudinary");
+const streamifier = require("streamifier");
+const PrintsImport = require("../models/prints");
+const SellbooksImport = require("../models/sellbooks");
+const BookCategoryImageImport = require("../models/categeory");
 
 const Prints = PrintsImport.default || PrintsImport;
 const Sellbooks = SellbooksImport.default || SellbooksImport;

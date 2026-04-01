@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import User from "./user.js";
+const mongoose =require("mongoose");
+const User = require("./user");
 
 const locationSchema=new mongoose.Schema({
     name:{

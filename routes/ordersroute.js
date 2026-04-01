@@ -1,11 +1,9 @@
-import express from "express";
-import multer from "multer";
-
-import { verifyToken } from "../verifyToken.js";
-import { orderPrint, cancelOrder } from "../controllers/orderprints.js";
-
+const express = require("express");
+const multer = require("multer");
 const router = express.Router();
 
+const { verifyToken } = require("../verifyToken");
+const { orderPrint, cancelOrder } = require("../controllers/orderprints");
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post(

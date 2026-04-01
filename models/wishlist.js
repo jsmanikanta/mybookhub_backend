@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+
 const wishlistSchema = new mongoose.Schema(
   {
     user: {
@@ -17,7 +18,6 @@ const wishlistSchema = new mongoose.Schema(
   }
 );
 
-// prevent duplicate wishlist entries
 wishlistSchema.index({ user: 1, book: 1 }, { unique: true });
 
 module.exports = mongoose.model("Wishlist", wishlistSchema);

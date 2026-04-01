@@ -13,7 +13,7 @@
     "path": "^0.12.7",
     "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node-2.0.3.tgz",
     "razorpay": "^2.9.6",
-    "resend": "^6.9.1",
+    "resend": "^6.10.0",
     "router": "^2.2.0",
     "streamifier": "^0.1.1"
   },

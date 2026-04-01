@@ -177,12 +177,16 @@ export const orderPrint = async (req, res) => {
 
           <ul>
             <li><b>Order Status:</b> ${newOrder.status}</li>
-            <li><b>Payment Status:</b> ${newOrder.paymentStatus}</li>
             <li><b>Payment Method:</b> ${newOrder.paymentMethod}</li>
             <li><b>Copies:</b> ${newOrder.copies}</li>
             <li><b>Binding:</b> ${newOrder.binding}</li>
             <li><b>Color:</b> ${newOrder.color}</li>
             <li><b>Sides:</b> ${newOrder.sides}</li>
+            ${
+              newOrder.paymentMethod === "Razorpay"
+                ? "<p>You will receive an email regarding your payment status shortly. Please check your inbox.</p>"
+                : ""
+            }
           </ul>
 
           ${

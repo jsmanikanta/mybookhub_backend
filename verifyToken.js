@@ -1,13 +1,10 @@
-import User from "./models/user.js";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+const User = require("./models/user");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
-dotenv.config();
-
-export const verifyToken = async (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token =
-    req.headers.token || (authHeader && authHeader.split(" ")[1]);
+  const token = req.headers.token || (authHeader && authHeader.split(" ")[1]);
 
   if (!token) {
     return res.status(401).json({ error: "Token is required" });
@@ -24,7 +21,6 @@ export const verifyToken = async (req, res, next) => {
 
     req.userId = user._id;
     req.user = user;
-
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
@@ -32,7 +28,10 @@ export const verifyToken = async (req, res, next) => {
         .status(401)
         .json({ error: "Token expired, please login again" });
     }
-
     return res.status(403).json({ error: "Invalid token" });
   }
+};
+
+module.exports = {
+  verifyToken,
 };
