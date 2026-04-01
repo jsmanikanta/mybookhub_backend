@@ -266,7 +266,7 @@ const verifyPayment = async (req, res) => {
       printOrder.razorpaySignature = razorpay_signature;
       printOrder.transactionId = razorpay_payment_id;
       await printOrder.save();
-      const user = await User.findById(printOrder.userId);
+      const user = await User.findById(printOrder.userid);
 
       const paymentDetailsHtml = `
   <h2>💰 Payment Successful</h2>
@@ -408,7 +408,7 @@ const paymentFailed = async (req, res) => {
     printOrder.paymentStatus = "failed";
     printOrder.razorpayOrderId = razorpayOrderId;
     await printOrder.save();
-    const user = await User.findById(printOrder.userId);
+    const user = await User.findById(printOrder.userid);
 
     const paymentFailedHtml = `
   <h2>❌ Payment Failed</h2>
