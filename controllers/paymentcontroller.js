@@ -2,7 +2,7 @@ const Razorpay = require("razorpay");
 const Payment = require("../models/payments");
 const PrintsImport = require("../models/prints");
 const crypto = require("crypto");
-const user = require("../models/user");
+const User =require("../models/user.js");
 const Prints = PrintsImport.default || PrintsImport;
 
 function getEnvValue(primary, fallback) {
@@ -149,7 +149,6 @@ const createOrder = async (req, res) => {
         userId: String(userId),
       },
     });
-
     const payment = await Payment.create({
       userId,
       printOrderId: printOrder._id,
