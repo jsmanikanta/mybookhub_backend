@@ -34,8 +34,4 @@ const verifyToken = async (req, res, next) => {
 
 module.exports = {
   verifyToken,
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> f85a39af7c7f6d11489c7715fab55327e17b35b3
