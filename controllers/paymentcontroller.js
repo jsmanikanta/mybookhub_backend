@@ -16,7 +16,7 @@ const RAZORPAY_KEY_SECRET = getEnvValue(
 );
 const { Resend } = require("resend");
 
-const resend = new Resend(process.env.RESEND_API_PAYEMENTS);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 function hasRazorpayKeys() {
   return Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET);
@@ -286,7 +286,7 @@ const verifyPayment = async (req, res) => {
 `;
       await resend.emails.send({
         from: "PrintKart <admin@mybookhub.store>",
-        to: user.email, // or admin mail
+        to: printOrder.email, // or admin mail
         subject: "Payment Successful - PrintKart",
         html: paymentDetailsHtml,
       });
@@ -429,7 +429,7 @@ const paymentFailed = async (req, res) => {
 `;
     await resend.emails.send({
       from: "PrintKart <admin@mybookhub.store>",
-      to: [user.email, "printkart0001@gmail.com"],
+      to: [printOrder.email, "printkart0001@gmail.com"],
       subject: "Payment Failed - PrintKart",
       html: paymentFailedHtml,
     });
