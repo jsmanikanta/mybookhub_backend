@@ -427,7 +427,7 @@ const paymentFailed = async (req, res) => {
   <p>Please try the payment again.</p>
 `;
     await resend.emails.send({
-      from: "PrintKart <admin@mybookhub.store>",
+      from: "PrintKart <payments@mybookhub.store>",
       to: [user.email, "admin@mybookhub.store"],
       subject: "Payment Failed - PrintKart",
       html: paymentFailedHtml,
