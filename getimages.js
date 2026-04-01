@@ -45,3 +45,4 @@ exports.getImages = async (req, res) => {
       error: "Failed to fetch images",
     });
   }
+};
