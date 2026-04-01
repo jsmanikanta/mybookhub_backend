@@ -16,7 +16,7 @@ const RAZORPAY_KEY_SECRET = getEnvValue(
 );
 const { Resend } = require("resend");
 
-const resend = new Resend(process.env.RESEND_API_PAYEMENTS);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 function hasRazorpayKeys() {
   return Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET);
