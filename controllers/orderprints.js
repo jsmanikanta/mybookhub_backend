@@ -196,6 +196,7 @@ export const orderPrint = async (req, res) => {
           }
 
           <p>Best regards,<br/><b>The MyBookHub Team</b></p>
+          <h4>For any queries, please contact us at support@mybookhub.store.</h4>
         `,
       });
 
@@ -285,6 +286,7 @@ export const cancelOrder = async (req, res) => {
 
             <br/>
             <p>Regards,<br/>MyBookHub Team</p>
+            <h4>For any queries, please contact us at support@mybookhub.store.</h4>
           `,
         });
 
@@ -320,6 +322,7 @@ export const cancelOrder = async (req, res) => {
           }
 
           <p>Cancelled on: ${new Date().toLocaleString()}</p>
+          <h4>For any queries, please contact us at support@mybookhub.store.</h4>
         `,
       });
 

@@ -213,6 +213,7 @@ const Sellbook = async (req, res) => {
       <p>Thank you for using <strong>MyBookHub</strong> to buy and sell books 📖</p>
 
       <p>Best Regards,<br/>MyBookHub Team</p>
+      <h4>For any queries, please contact us at support@mybookhub.store.</h4>
     `;
 
     try {

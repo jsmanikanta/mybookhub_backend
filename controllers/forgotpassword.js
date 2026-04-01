@@ -51,6 +51,7 @@ export const resetPasswordWithoutOTP = async (req, res) => {
 
       <p>Stay secure,<br/>
       <b>The MyBookHub Team</b></p>
+      <h4>For any queries, please contact us at support@mybookhub.store.</h4>
     `,
       });
 

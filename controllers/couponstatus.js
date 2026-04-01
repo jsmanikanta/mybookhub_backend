@@ -112,6 +112,7 @@ const verifyCoupon = async (req, res) => {
             <p><b>Discount:</b> ₹${discount}</p>
             <p><b>Date:</b> ${now.toLocaleString()}</p>
             <p>Thank you for using <b>MyBookHub</b>.</p>
+            <h4>For any queries, please contact us at support@mybookhub.store.</h4>
           `,
         });
       } catch (err) {

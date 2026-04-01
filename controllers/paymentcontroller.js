@@ -281,10 +281,11 @@ const verifyPayment = async (req, res) => {
     <li><b>Discount:</b> ${Math.max(printOrder.originalprice - (printOrder.discountprice || printOrder.originalprice), 0)}</li>
     <li><b>Final Paid Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
     <li><b>Currency:</b> INR</li>
+    <h4>For any queries, please contact us at support@mybookhub.store.</h4>
   </ul>
 `;
       await resend.emails.send({
-        from: "PrintKart <payments@mybookhub.store>",
+        from: "PrintKart <admin@mybookhub.store>",
         to: user.email, // or admin mail
         subject: "Payment Successful - PrintKart",
         html: paymentDetailsHtml,
@@ -422,12 +423,13 @@ const paymentFailed = async (req, res) => {
     <li><b>Final Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
     <li><b>Currency:</b> INR</li>
   </ul>
+  <h4>For any queries, please contact us at support@mybookhub.store.</h4>
 
   <p>Please try the payment again.</p>
 `;
     await resend.emails.send({
-      from: "PrintKart <payments@mybookhub.store>",
-      to: [user.email, "admin@mybookhub.store"],
+      from: "PrintKart <admin@mybookhub.store>",
+      to: [user.email, "printkart0001@gmail.com"],
       subject: "Payment Failed - PrintKart",
       html: paymentFailedHtml,
     });
