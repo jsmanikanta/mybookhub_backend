@@ -266,6 +266,7 @@ const verifyPayment = async (req, res) => {
       printOrder.razorpaySignature = razorpay_signature;
       printOrder.transactionId = razorpay_payment_id;
       await printOrder.save();
+      const user = await User.findById(printOrder.userId);
 
       const paymentDetailsHtml = `
   <h2>💰 Payment Successful</h2>
@@ -285,8 +286,8 @@ const verifyPayment = async (req, res) => {
   </ul>
 `;
       await resend.emails.send({
-        from: "PrintKart <admin@mybookhub.store>",
-        to: printOrder.email, // or admin mail
+        from: "PrintKart <payments@mybookhub.store>",
+        to: user.email, // or admin mail
         subject: "Payment Successful - PrintKart",
         html: paymentDetailsHtml,
       });
@@ -407,6 +408,7 @@ const paymentFailed = async (req, res) => {
     printOrder.paymentStatus = "failed";
     printOrder.razorpayOrderId = razorpayOrderId;
     await printOrder.save();
+    const user = await User.findById(printOrder.userId);
 
     const paymentFailedHtml = `
   <h2>❌ Payment Failed</h2>
@@ -428,8 +430,8 @@ const paymentFailed = async (req, res) => {
   <p>Please try the payment again.</p>
 `;
     await resend.emails.send({
-      from: "PrintKart <admin@mybookhub.store>",
-      to: [printOrder.email, "printkart0001@gmail.com"],
+      from: "PrintKart <payments@mybookhub.store>",
+      to: [user.email, "printkart0001@gmail.com"],
       subject: "Payment Failed - PrintKart",
       html: paymentFailedHtml,
     });
