@@ -282,7 +282,7 @@ const verifyPayment = async (req, res) => {
     <li><b>Discount:</b> ${Math.max(printOrder.originalprice - (printOrder.discountprice || printOrder.originalprice), 0)}</li>
     <li><b>Final Paid Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
     <li><b>Currency:</b> INR</li>
-    <h4>For any queries, please contact us at support@mybookhub.store.</h4>
+    <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
   </ul>
 `;
       await resend.emails.send({
@@ -425,7 +425,7 @@ const paymentFailed = async (req, res) => {
     <li><b>Final Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
     <li><b>Currency:</b> INR</li>
   </ul>
-  <h4>For any queries, please contact us at support@mybookhub.store.</h4>
+  <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
 
   <p>Please try the payment again.</p>
 `;

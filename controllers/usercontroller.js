@@ -56,7 +56,7 @@ export const Register = async (req, res) => {
           <p>Your journey for seamless study materials and secondhand books starts here.</p>
           <p>If you have any questions, reply to this email — we're always happy to help!</p>
           <p>Happy reading,<br/><b>The MyBookHub Team</b></p>
-          <h4>For any queries, please contact us at support@mybookhub.store.</h4>
+          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
         `,
       });
 
