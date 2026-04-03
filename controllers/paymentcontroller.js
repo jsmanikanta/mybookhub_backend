@@ -287,7 +287,7 @@ const verifyPayment = async (req, res) => {
 `;
       await resend.emails.send({
         from: "PrintKart <payments@mybookhub.store>",
-        to: user.email, // or admin mail
+        to: user.email,
         subject: "Payment Successful - PrintKart",
         html: paymentDetailsHtml,
       });

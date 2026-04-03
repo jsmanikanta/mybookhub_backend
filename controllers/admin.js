@@ -73,12 +73,7 @@ const getAllOrders = async (req, res) => {
 
 const updatePaymentStatus = async (req, res) => {
   const { orderId } = req.params;
-
   let { paymentStatus } = req.body;
-
-  if (!paymentStatus) {
-    return res.status(400).json({ error: "paymentStatus is required" });
-  }
 
   paymentStatus = paymentStatus.toString().trim().toLowerCase();
 
@@ -88,10 +83,6 @@ const updatePaymentStatus = async (req, res) => {
     return res.status(400).json({ error: "Invalid payment status value" });
   }
 
-  if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    return res.status(400).json({ error: "Invalid orderId format" });
-  }
-
   try {
     const order = await Prints.findById(orderId);
 
@@ -99,21 +90,24 @@ const updatePaymentStatus = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    // ✅ update order
     order.paymentStatus = paymentStatus;
-
-    if (paymentStatus === "paid" && !order.paymentMethod) {
-      order.paymentMethod = "Razorpay";
-    }
-
     await order.save();
+
+    // ✅ ALSO update payment collection
+    await Payment.findOneAndUpdate(
+      { printOrderId: orderId },
+      { status: paymentStatus },
+      { new: true },
+    );
 
     return res.status(200).json({
       success: true,
-      message: "Payment status updated successfully",
+      message: `Payment status updated to ${paymentStatus}`,
       order,
     });
   } catch (error) {
-    console.error("Error updating payment status:", error);
+    console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
