@@ -82,7 +82,7 @@ const updatePaymentStatus = async (req, res) => {
 
   paymentStatus = paymentStatus.toString().trim().toLowerCase();
 
-  const validPaymentStatuses = ["pending", "paid", "failed"];
+  const validPaymentStatuses = ["pending", "paid", "failed", "refunded"];
 
   if (!validPaymentStatuses.includes(paymentStatus)) {
     return res.status(400).json({ error: "Invalid payment status value" });

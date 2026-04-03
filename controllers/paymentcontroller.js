@@ -442,7 +442,6 @@ const paymentFailed = async (req, res) => {
     });
   } catch (error) {
     console.error("paymentFailed error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to update payment status",
