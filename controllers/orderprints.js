@@ -29,9 +29,7 @@ const uploadToCloudinary = async (buffer, folderName) => {
 export const orderPrint = async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;
-    const name = req.user?.fullname;
     const email = req.user?.email;
-    const mobile = req.user?.mobileNumber;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -43,6 +41,8 @@ export const orderPrint = async (req, res) => {
     }
 
     const {
+      name,
+      mobile,
       color,
       sides,
       address,
@@ -58,9 +58,10 @@ export const orderPrint = async (req, res) => {
       paymentMethod,
     } = req.body;
 
+    // ✅ Validate name & mobile from request
     if (!name || !mobile) {
       return res.status(400).json({
-        message: "User name or mobile number missing in profile",
+        message: "Name and mobile number are required",
       });
     }
 
@@ -103,8 +104,8 @@ export const orderPrint = async (req, res) => {
     }
 
     const newOrder = new Prints({
-      name,
-      mobile,
+      name, // ✅ from body
+      mobile, // ✅ from body
       file: uploadedPrint.secure_url,
       originalprice: Number(originalprice),
       discountprice:
@@ -131,9 +132,9 @@ export const orderPrint = async (req, res) => {
 
     await newOrder.save();
 
+    // ✅ Admin Email
     const adminEmailHtml = `
       <h2>New print order placed by ${newOrder.name}</h2>
-      <p>From the account ${user.fullname}</p>
 
       <h3>Order Details:</h3>
       <ul>
@@ -164,16 +165,16 @@ export const orderPrint = async (req, res) => {
       html: adminEmailHtml,
     });
 
+    // ✅ User Email
     try {
       await resend.emails.send({
         from: "MyBookHub <admin@mybookhub.store>",
         to: email,
         subject: "Thank You for Your Print Order",
         html: `
-          <h2>Hello ${user.fullname},</h2>
+          <h2>Hello ${name},</h2>
 
           <p>Thank you for placing your print order with <b>MyBookHub</b>.</p>
-          <p>We have successfully received your request.</p>
 
           <ul>
             <li><b>Order Status:</b> ${newOrder.status}</li>
@@ -182,27 +183,20 @@ export const orderPrint = async (req, res) => {
             <li><b>Binding:</b> ${newOrder.binding}</li>
             <li><b>Color:</b> ${newOrder.color}</li>
             <li><b>Sides:</b> ${newOrder.sides}</li>
-            ${
-              newOrder.paymentMethod === "Razorpay"
-                ? "<p>You will receive an email regarding your payment status shortly. Please check your inbox.</p>"
-                : ""
-            }
           </ul>
 
           ${
             newOrder.paymentMethod === "Pay on Delivery"
-              ? `<p>You can pay at the time of delivery / collection.</p>`
-              : `<p>Please complete your payment through Razorpay to continue processing your order.</p>`
+              ? `<p>You can pay at delivery.</p>`
+              : `<p>Please complete your payment via Razorpay.</p>`
           }
 
           <p>Best regards,<br/><b>The MyBookHub Team</b></p>
-          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
+          <h4>Support: <a href="mailto:support@mybookhub.store">support@mybookhub.store</a></h4>
         `,
       });
-
-      console.log("Print order confirmation email sent to:", email);
     } catch (emailError) {
-      console.error("Failed to send print order email:", emailError);
+      console.error("Email error:", emailError);
     }
 
     return res.status(201).json({
@@ -307,7 +301,7 @@ export const cancelOrder = async (req, res) => {
           <p>A user has cancelled a print order.</p>
 
           <ul>
-            <li><b>User:</b> ${name}</li>
+            <li><b>User:</b> ${order.name}</li>
             <li><b>Email:</b> ${email}</li>
             <li><b>Order ID:</b> ${order._id}</li>
             <li><b>Order Status:</b> Cancelled</li>
