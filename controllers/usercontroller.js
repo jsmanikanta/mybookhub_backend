@@ -279,7 +279,7 @@ export const getProfile = async (req, res) => {
 
     if (needsFallback) {
       const firstOrder = await Prints.findOne({ userid: userId })
-        .sort({ orderDate: 1 })
+        .sort({ orderDate: -1 })
         .select("name mobile address college year rollno section orderDate");
 
       if (firstOrder) {
