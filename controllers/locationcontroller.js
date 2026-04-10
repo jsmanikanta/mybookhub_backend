@@ -1,11 +1,13 @@
-import dotenv from "dotenv";
+const dotenv = require("dotenv");
 dotenv.config();
-import Location from "../models/location.js";
-import User from "../models/user.js";
-import { Resend } from "resend";
+
+const Location = require("../models/location");
+const User = require("../models/user");
+const { Resend } = require("resend");
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const addLocation = async (req, res) => {
+const addLocation = async (req, res) => {
   const userId = req.userId;
 
   const { name, mobilenumber, state, district, pincode, address, landmark } =
@@ -26,33 +28,39 @@ export const addLocation = async (req, res) => {
       landmark,
       userid: userId,
     });
+
     await newloction.save();
-    res.status(201).json({
+
+    return res.status(201).json({
       message: "Location registered successfully!",
       location: newloction,
     });
-    console.log("new adress added");
   } catch (error) {
     console.error("Register error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const getLocationsbyId = async (req, res) => {
+const getLocationsbyId = async (req, res) => {
   try {
     const userId = req.userId;
+
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
+
     const user = await User.findById(userId).select(
-      "fullname mobileNumber email",
+      "fullname mobileNumber email"
     );
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
     const locations = await Location.find({ userid: userId }).select(
-      "name mobilenumber state district pincode address landmark",
+      "name mobilenumber state district pincode address landmark"
     );
+
     return res.status(200).json({
       user: {
         fullname: user.fullname,
@@ -73,4 +81,9 @@ export const getLocationsbyId = async (req, res) => {
     console.error("Error fetching user data:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
+};
+
+module.exports = {
+  addLocation,
+  getLocationsbyId,
 };

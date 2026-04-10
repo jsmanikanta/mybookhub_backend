@@ -1,23 +1,19 @@
-import dotenv from "dotenv";
+const dotenv = require("dotenv");
 dotenv.config();
-import Prints from "../models/prints.js";
-import Sellbooks from "../models/sellbooks.js";
-import User from "../models/user.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Resend } from "resend";
+
+const Prints = require("../models/prints");
+const Sellbooks = require("../models/sellbooks");
+const User = require("../models/user");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const express = require("express");
+const path = require("path");
+const { Resend } = require("resend");
+
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-const app = express();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const secretkey = process.env.SECRETKEY;
 
-export const Register = async (req, res) => {
+const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
 
   if (!fullname || !mobileNumber || !email || !password) {
@@ -39,6 +35,7 @@ export const Register = async (req, res) => {
       email,
       password: hashedPassword,
     });
+
     await newUser.save();
 
     try {
@@ -56,7 +53,7 @@ export const Register = async (req, res) => {
           <p>Your journey for seamless study materials and secondhand books starts here.</p>
           <p>If you have any questions, reply to this email — we're always happy to help!</p>
           <p>Happy reading,<br/><b>The MyBookHub Team</b></p>
-          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
+          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a>.</h4>
         `,
       });
 
@@ -64,17 +61,18 @@ export const Register = async (req, res) => {
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
     }
-    res.status(201).json({
+
+    return res.status(201).json({
       message: "User registered successfully!",
       user: newUser,
     });
   } catch (error) {
     console.error("Register error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const login = async (req, res) => {
+const login = async (req, res) => {
   const { identifier, password } = req.body;
 
   try {
@@ -136,11 +134,11 @@ export const login = async (req, res) => {
   }
 };
 
-export function setupUploadsStatic(app) {
+function setupUploadsStatic(app) {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 }
 
-export const getPrintsById = async (req, res) => {
+const getPrintsById = async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -185,14 +183,12 @@ export const getPrintsById = async (req, res) => {
         address: order.address || "",
         rollno: order.rollno || "",
         description: order.description || "",
-
         paymentMethod: order.paymentMethod || "",
         paymentStatus: order.paymentStatus || "",
         transactionId: order.transactionId || "",
         razorpayOrderId: order.razorpayOrderId || "",
         razorpayPaymentId: order.razorpayPaymentId || "",
         razorpaySignature: order.razorpaySignature || "",
-
         orderDate: order.orderDate || null,
         status: order.status || "",
         createdAt: order.createdAt || null,
@@ -205,23 +201,28 @@ export const getPrintsById = async (req, res) => {
   }
 };
 
-export const getBooksById = async (req, res) => {
+const getBooksById = async (req, res) => {
   try {
     const userId = req.userId;
+
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
+
     const user = await User.findById(userId).select(
       "fullname mobileNumber email",
     );
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
     const books = await Sellbooks.find({ user: userId })
       .select(
         "name image price condition description location categeory subcategeory selltype status updatedPrice soldstatus",
       )
       .sort({ date_added: -1 });
+
     return res.status(200).json({
       user: {
         fullname: user.fullname,
@@ -251,9 +252,10 @@ export const getBooksById = async (req, res) => {
   }
 };
 
-export const getProfile = async (req, res) => {
+const getProfile = async (req, res) => {
   try {
     const userId = req.userId;
+
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
@@ -313,7 +315,7 @@ export const getProfile = async (req, res) => {
   }
 };
 
-export const updateProfile = async (req, res) => {
+const updateProfile = async (req, res) => {
   const userId = req.userId;
   const updates = req.body;
 
@@ -330,7 +332,9 @@ export const updateProfile = async (req, res) => {
 
   const validUpdates = {};
   for (const key of allowedFields) {
-    if (updates[key] !== undefined) validUpdates[key] = updates[key];
+    if (updates[key] !== undefined) {
+      validUpdates[key] = updates[key];
+    }
   }
 
   if (Object.keys(validUpdates).length === 0) {
@@ -339,11 +343,15 @@ export const updateProfile = async (req, res) => {
 
   try {
     const orConditions = [];
-    if (validUpdates.fullname)
+    if (validUpdates.fullname) {
       orConditions.push({ fullname: validUpdates.fullname });
-    if (validUpdates.mobileNumber)
+    }
+    if (validUpdates.mobileNumber) {
       orConditions.push({ mobileNumber: validUpdates.mobileNumber });
-    if (validUpdates.email) orConditions.push({ email: validUpdates.email });
+    }
+    if (validUpdates.email) {
+      orConditions.push({ email: validUpdates.email });
+    }
 
     if (orConditions.length > 0) {
       const existing = await User.findOne({
@@ -374,4 +382,14 @@ export const updateProfile = async (req, res) => {
     console.error("Update error:", error);
     return res.status(500).json({ error: "Update failed" });
   }
+};
+
+module.exports = {
+  Register,
+  login,
+  setupUploadsStatic,
+  getPrintsById,
+  getBooksById,
+  getProfile,
+  updateProfile,
 };

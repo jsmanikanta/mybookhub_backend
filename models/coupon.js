@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const couponStatusSchema = new mongoose.Schema(
   {
@@ -40,11 +40,11 @@ const couponStatusSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Couponstatus =
   mongoose.models.Couponstatus ||
   mongoose.model("Couponstatus", couponStatusSchema);
 
-export default Couponstatus;
+module.exports = Couponstatus;

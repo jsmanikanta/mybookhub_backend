@@ -1,15 +1,17 @@
-import bcrypt from "bcryptjs";
-import User from "../models/user.js";
-import { Resend } from "resend";
+const bcrypt = require("bcryptjs");
+const User = require("../models/user");
+const { Resend } = require("resend");
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const resetPasswordWithoutOTP = async (req, res) => {
+const resetPasswordWithoutOTP = async (req, res) => {
   const { identifier, newPassword } = req.body;
 
-  if (!identifier || !newPassword)
+  if (!identifier || !newPassword) {
     return res
       .status(400)
       .json({ error: "Identifier and new password are required" });
+  }
 
   try {
     let user;
@@ -35,24 +37,24 @@ export const resetPasswordWithoutOTP = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: "MyBookHub <admin@mybookhub.store>", // must be verified domain
+        from: "MyBookHub <admin@mybookhub.store>",
         to: user.email,
         subject: "Your Password Has Been Reset Successfully 🔐",
         html: `
-      <h2>Hello ${user.fullname},</h2>
+          <h2>Hello ${user.fullname},</h2>
 
-      <p>Your password has been successfully reset for your <b>MyBookHub</b> account.</p>
+          <p>Your password has been successfully reset for your <b>MyBookHub</b> account.</p>
 
-      <p>If you made this change, no further action is required.</p>
+          <p>If you made this change, no further action is required.</p>
 
-      <p><b>If you did NOT request this password reset, please contact us immediately</b> by replying to this email.</p>
+          <p><b>If you did NOT request this password reset, please contact us immediately</b> by replying to this email.</p>
 
-      <p>For security reasons, we recommend keeping your password confidential and avoiding sharing it with anyone.</p>
+          <p>For security reasons, we recommend keeping your password confidential and avoiding sharing it with anyone.</p>
 
-      <p>Stay secure,<br/>
-      <b>The MyBookHub Team</b></p>
-      <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
-    `,
+          <p>Stay secure,<br/>
+          <b>The MyBookHub Team</b></p>
+          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a>.</h4>
+        `,
       });
 
       console.log("Password reset email sent to:", user.email);
@@ -60,11 +62,13 @@ export const resetPasswordWithoutOTP = async (req, res) => {
       console.error("Failed to send password reset email:", emailError);
     }
 
-    res
-      .status(200)
-      .json({ message: "Password reset successful" });
+    return res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
     console.error("Error resetting password without OTP:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
+};
+
+module.exports = {
+  resetPasswordWithoutOTP,
 };

@@ -1,9 +1,9 @@
-import { Resend } from "resend";
-import dotenv from "dotenv";
-import User from "../models/user.js";
-import Prints from "../models/prints.js";
-import cloudinary from "cloudinary";
-import streamifier from "streamifier";
+const { Resend } = require("resend");
+const dotenv = require("dotenv");
+const User = require("../models/user");
+const Prints = require("../models/prints");
+const cloudinary = require("cloudinary");
+const streamifier = require("streamifier");
 
 dotenv.config();
 
@@ -15,7 +15,6 @@ cloudinary.v2.config({
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Upload buffer to Cloudinary
 const uploadToCloudinary = async (buffer, folderName) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.v2.uploader.upload_stream(
@@ -26,7 +25,7 @@ const uploadToCloudinary = async (buffer, folderName) => {
   });
 };
 
-export const orderPrint = async (req, res) => {
+const orderPrint = async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;
     const email = req.user?.email;
@@ -58,7 +57,6 @@ export const orderPrint = async (req, res) => {
       paymentMethod,
     } = req.body;
 
-    // ✅ Validate name & mobile from request
     if (!name || !mobile) {
       return res.status(400).json({
         message: "Name and mobile number are required",
@@ -104,8 +102,8 @@ export const orderPrint = async (req, res) => {
     }
 
     const newOrder = new Prints({
-      name, // ✅ from body
-      mobile, // ✅ from body
+      name,
+      mobile,
       file: uploadedPrint.secure_url,
       originalprice: Number(originalprice),
       discountprice:
@@ -132,7 +130,6 @@ export const orderPrint = async (req, res) => {
 
     await newOrder.save();
 
-    // ✅ Admin Email
     const adminEmailHtml = `
       <h2>New print order placed by ${newOrder.name}</h2>
 
@@ -165,7 +162,6 @@ export const orderPrint = async (req, res) => {
       html: adminEmailHtml,
     });
 
-    // ✅ User Email
     try {
       await resend.emails.send({
         from: "MyBookHub <admin@mybookhub.store>",
@@ -213,7 +209,7 @@ export const orderPrint = async (req, res) => {
   }
 };
 
-export const cancelOrder = async (req, res) => {
+const cancelOrder = async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;
     const name = req.user?.fullname;
@@ -249,6 +245,7 @@ export const cancelOrder = async (req, res) => {
         message: "Order cannot be cancelled now",
       });
     }
+
     order.status = "Cancelled";
     await order.save();
 
@@ -280,7 +277,7 @@ export const cancelOrder = async (req, res) => {
 
             <br/>
             <p>Regards,<br/>MyBookHub Team</p>
-            <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
+            <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a>.</h4>
           `,
         });
 
@@ -316,7 +313,7 @@ export const cancelOrder = async (req, res) => {
           }
 
           <p>Cancelled on: ${new Date().toLocaleString()}</p>
-          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
+          <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a>.</h4>
         `,
       });
 
@@ -337,4 +334,9 @@ export const cancelOrder = async (req, res) => {
       message: "Internal server error",
     });
   }
+};
+
+module.exports = {
+  orderPrint,
+  cancelOrder,
 };
