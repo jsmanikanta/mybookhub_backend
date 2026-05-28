@@ -19,8 +19,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "type": "module"
+    "dev": "nodemon server.js"
   },
   "name": "backend",
   "version": "1.0.0",
