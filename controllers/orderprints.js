@@ -81,7 +81,7 @@ const orderPrint = async (req, res) => {
       });
     }
 
-    const MAX_SIZE = 10 * 1024 * 1024;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10 mb
     const pdfFile = req.files.file[0];
 
     if (pdfFile.size > MAX_SIZE) {

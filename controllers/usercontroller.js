@@ -256,7 +256,7 @@ const getProfile = async (req, res) => {
   try {
     const userId = req.userId;
 
-    if (!userId) {
+    if (!userId) { 
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
