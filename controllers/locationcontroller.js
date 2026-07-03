@@ -14,10 +14,18 @@ const addLocation = async (req, res) => {
     req.body;
 
   if (!userId) {
+    console.warn("[locationcontroller:addLocation] User ID missing from token");
     return res.status(400).json({ error: "User ID missing from token" });
   }
 
   try {
+    console.log("[locationcontroller:addLocation] Request received", {
+      userId: String(userId),
+      name: name || "",
+      district: district || "",
+      state: state || "",
+    });
+
     const newloction = new Location({
       name,
       mobilenumber,
@@ -30,6 +38,11 @@ const addLocation = async (req, res) => {
     });
 
     await newloction.save();
+
+    console.log("[locationcontroller:addLocation] Location saved", {
+      userId: String(userId),
+      locationId: String(newloction._id),
+    });
 
     return res.status(201).json({
       message: "Location registered successfully!",
@@ -46,20 +59,31 @@ const getLocationsbyId = async (req, res) => {
     const userId = req.userId;
 
     if (!userId) {
+      console.warn(
+        "[locationcontroller:getLocationsbyId] User ID missing from token",
+      );
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
     const user = await User.findById(userId).select(
-      "fullname mobileNumber email"
+      "fullname mobileNumber email",
     );
 
     if (!user) {
+      console.warn("[locationcontroller:getLocationsbyId] User not found", {
+        userId: String(userId),
+      });
       return res.status(404).json({ error: "User not found" });
     }
 
     const locations = await Location.find({ userid: userId }).select(
-      "name mobilenumber state district pincode address landmark"
+      "name mobilenumber state district pincode address landmark",
     );
+
+    console.log("[locationcontroller:getLocationsbyId] Locations fetched", {
+      userId: String(userId),
+      totalLocations: locations.length,
+    });
 
     return res.status(200).json({
       user: {

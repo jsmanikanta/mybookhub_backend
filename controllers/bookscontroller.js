@@ -37,7 +37,14 @@ const Sellbook = async (req, res) => {
   try {
     const userId = req.userId;
 
+    console.log("[bookscontroller:Sellbook] Request received", {
+      userId: userId ? String(userId) : "",
+      hasImage: Boolean(req.file && req.file.buffer),
+      fields: Object.keys(req.body || {}),
+    });
+
     if (!userId) {
+      console.warn("[bookscontroller:Sellbook] Missing userId");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -45,6 +52,9 @@ const Sellbook = async (req, res) => {
     }
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
+      console.warn("[bookscontroller:Sellbook] Invalid userId", {
+        userId: String(userId),
+      });
       return res.status(401).json({
         success: false,
         message: "Invalid user",
@@ -56,6 +66,9 @@ const Sellbook = async (req, res) => {
     );
 
     if (!user) {
+      console.warn("[bookscontroller:Sellbook] User not found", {
+        userId: String(userId),
+      });
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -103,6 +116,16 @@ const Sellbook = async (req, res) => {
       !trimmedAddress ||
       !trimmedSelltype
     ) {
+      console.warn("[bookscontroller:Sellbook] Missing required fields", {
+        userId: String(userId),
+        name: trimmedName,
+        category: trimmedCategory,
+        condition: trimmedCondition,
+        state: trimmedState,
+        district: trimmedDistrict,
+        pincode: trimmedPincode,
+        selltype: trimmedSelltype,
+      });
       return res.status(400).json({
         success: false,
         message:
@@ -117,6 +140,10 @@ const Sellbook = async (req, res) => {
         : parsedPrice;
 
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+      console.warn("[bookscontroller:Sellbook] Invalid price", {
+        userId: String(userId),
+        price,
+      });
       return res.status(400).json({
         success: false,
         message: "price must be a valid number",
@@ -124,6 +151,10 @@ const Sellbook = async (req, res) => {
     }
 
     if (Number.isNaN(parsedUpdatedPrice) || parsedUpdatedPrice < 0) {
+      console.warn("[bookscontroller:Sellbook] Invalid updatedPrice", {
+        userId: String(userId),
+        updatedPrice,
+      });
       return res.status(400).json({
         success: false,
         message: "updatedPrice must be a valid number",
@@ -131,13 +162,25 @@ const Sellbook = async (req, res) => {
     }
 
     if (!req.file || !req.file.buffer) {
+      console.warn("[bookscontroller:Sellbook] Missing book image", {
+        userId: String(userId),
+      });
       return res.status(400).json({
         success: false,
         message: "Book image is required",
       });
     }
 
+    console.log("[bookscontroller:Sellbook] Uploading image to Cloudinary", {
+      userId: String(userId),
+      name: trimmedName,
+    });
     const uploadResult = await uploadToCloudinary(req.file.buffer, "sellbooks");
+
+    console.log("[bookscontroller:Sellbook] Image uploaded", {
+      userId: String(userId),
+      imageUrl: uploadResult.secure_url,
+    });
 
     const newBook = await Sellbooks.create({
       name: trimmedName,
@@ -155,6 +198,12 @@ const Sellbook = async (req, res) => {
       subcategeory: trimmedSubcategory,
       selltype: trimmedSelltype,
       user: userId,
+    });
+
+    console.log("[bookscontroller:Sellbook] Book created", {
+      userId: String(userId),
+      bookId: String(newBook._id),
+      email: user.email,
     });
 
     const adminEmailHtml = `
@@ -223,6 +272,9 @@ const Sellbook = async (req, res) => {
         subject: "📘 New Book Listed for Sale - MyBookHub",
         html: adminEmailHtml,
       });
+      console.log("[bookscontroller:Sellbook] Admin notification sent", {
+        bookId: String(newBook._id),
+      });
     } catch (mailError) {
       console.error("Admin email send error:", mailError);
     }
@@ -235,10 +287,19 @@ const Sellbook = async (req, res) => {
           subject: "📚 Your Book Listing Received - MyBookHub",
           html: sellerEmailHtml,
         });
+        console.log("[bookscontroller:Sellbook] Seller notification sent", {
+          bookId: String(newBook._id),
+          email: user.email,
+        });
       }
     } catch (mailError) {
       console.error("Seller email send error:", mailError);
     }
+
+    console.log("[bookscontroller:Sellbook] Request completed", {
+      userId: String(userId),
+      bookId: String(newBook._id),
+    });
 
     return res.status(201).json({
       success: true,
@@ -261,7 +322,14 @@ const updateSoldStatus = async (req, res) => {
     const { id } = req.params;
     const { soldstatus } = req.body;
 
+    console.log("[bookscontroller:updateSoldStatus] Request received", {
+      userId: userId ? String(userId) : "",
+      bookId: id || "",
+      soldstatus: soldstatus || "",
+    });
+
     if (!userId) {
+      console.warn("[bookscontroller:updateSoldStatus] Missing userId");
       return res.status(401).json({
         success: false,
         error: "Unauthorized",
@@ -269,6 +337,9 @@ const updateSoldStatus = async (req, res) => {
     }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.warn("[bookscontroller:updateSoldStatus] Invalid book ID", {
+        bookId: id,
+      });
       return res.status(400).json({
         success: false,
         error: "Invalid book ID",
@@ -277,6 +348,9 @@ const updateSoldStatus = async (req, res) => {
 
     const allowedStatuses = ["Instock", "Soldout"];
     if (!allowedStatuses.includes(soldstatus)) {
+      console.warn("[bookscontroller:updateSoldStatus] Invalid soldstatus", {
+        soldstatus,
+      });
       return res.status(400).json({
         success: false,
         error: "soldstatus must be 'Instock' or 'Soldout'",
@@ -293,11 +367,24 @@ const updateSoldStatus = async (req, res) => {
     );
 
     if (!updatedBook) {
+      console.warn(
+        "[bookscontroller:updateSoldStatus] Book not found or unauthorized",
+        {
+          userId: String(userId),
+          bookId: id,
+        },
+      );
       return res.status(404).json({
         success: false,
         error: "Book not found or not authorized",
       });
     }
+
+    console.log("[bookscontroller:updateSoldStatus] Sold status updated", {
+      userId: String(userId),
+      bookId: id,
+      soldstatus: updatedBook.soldstatus,
+    });
 
     return res.status(200).json({
       success: true,

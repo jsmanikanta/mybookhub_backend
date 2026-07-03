@@ -21,9 +21,14 @@ cloudinary.v2.config({
 
 const getAllOrders = async (req, res) => {
   try {
+    console.log("[admin:getAllOrders] Request received");
     const orders = await Prints.find()
       .sort({ orderDate: -1 })
       .populate("userid", "fullname email mobileNumber");
+
+    console.log("[admin:getAllOrders] Orders fetched", {
+      totalOrders: orders.length,
+    });
 
     return res.status(200).json({
       success: true,
@@ -76,7 +81,15 @@ const updatePaymentStatus = async (req, res) => {
 
   let { paymentStatus } = req.body;
 
+  console.log("[admin:updatePaymentStatus] Request received", {
+    orderId: orderId || "",
+    paymentStatus: paymentStatus || "",
+  });
+
   if (!paymentStatus) {
+    console.warn("[admin:updatePaymentStatus] Missing paymentStatus", {
+      orderId: orderId || "",
+    });
     return res.status(400).json({ error: "paymentStatus is required" });
   }
 
@@ -85,10 +98,17 @@ const updatePaymentStatus = async (req, res) => {
   const validPaymentStatuses = ["pending", "paid", "failed", "refunded"];
 
   if (!validPaymentStatuses.includes(paymentStatus)) {
+    console.warn("[admin:updatePaymentStatus] Invalid paymentStatus", {
+      orderId: orderId || "",
+      paymentStatus,
+    });
     return res.status(400).json({ error: "Invalid payment status value" });
   }
 
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    console.warn("[admin:updatePaymentStatus] Invalid orderId format", {
+      orderId,
+    });
     return res.status(400).json({ error: "Invalid orderId format" });
   }
 
@@ -96,6 +116,9 @@ const updatePaymentStatus = async (req, res) => {
     const order = await Prints.findById(orderId);
 
     if (!order) {
+      console.warn("[admin:updatePaymentStatus] Order not found", {
+        orderId,
+      });
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -106,6 +129,11 @@ const updatePaymentStatus = async (req, res) => {
     }
 
     await order.save();
+
+    console.log("[admin:updatePaymentStatus] Payment status updated", {
+      orderId,
+      paymentStatus,
+    });
 
     return res.status(200).json({
       success: true,
@@ -122,6 +150,12 @@ const updatePrintStatus = async (req, res) => {
   const { orderId } = req.params;
   const { status, discountprice } = req.body;
 
+  console.log("[admin:updatePrintStatus] Request received", {
+    orderId: orderId || "",
+    status: status || "",
+    discountprice: discountprice ?? "",
+  });
+
   const validStatuses = [
     "Order placed",
     "Verified",
@@ -132,10 +166,17 @@ const updatePrintStatus = async (req, res) => {
   ];
 
   if (!validStatuses.includes(status)) {
+    console.warn("[admin:updatePrintStatus] Invalid status", {
+      orderId: orderId || "",
+      status,
+    });
     return res.status(400).json({ error: "Invalid status value" });
   }
 
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    console.warn("[admin:updatePrintStatus] Invalid orderId format", {
+      orderId,
+    });
     return res.status(400).json({ error: "Invalid orderId format" });
   }
 
@@ -143,6 +184,9 @@ const updatePrintStatus = async (req, res) => {
     const order = await Prints.findById(orderId);
 
     if (!order) {
+      console.warn("[admin:updatePrintStatus] Order not found", {
+        orderId,
+      });
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -159,6 +203,11 @@ const updatePrintStatus = async (req, res) => {
 
     await order.save();
 
+    console.log("[admin:updatePrintStatus] Print status updated", {
+      orderId,
+      status,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Print order updated successfully",
@@ -172,6 +221,7 @@ const updatePrintStatus = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
+    console.log("[admin:getAllBooks] Request received");
     const books = await Sellbooks.find()
       .populate({
         path: "user",
@@ -206,6 +256,10 @@ const getAllBooks = async (req, res) => {
       date_added: book.date_added || null,
     }));
 
+    console.log("[admin:getAllBooks] Books fetched", {
+      totalBooks: formattedBooks.length,
+    });
+
     return res.status(200).json({
       success: true,
       count: formattedBooks.length,
@@ -222,17 +276,34 @@ const updateStatus = async (req, res) => {
     const { bookId } = req.params;
     const { status, sellingPrice, stockStatus } = req.body;
 
+    console.log("[admin:updateStatus] Request received", {
+      bookId: bookId || "",
+      status: status || "",
+      sellingPrice: sellingPrice ?? "",
+      stockStatus: stockStatus || "",
+    });
+
     if (!["Accepted", "Rejected"].includes(status)) {
+      console.warn("[admin:updateStatus] Invalid status", {
+        bookId: bookId || "",
+        status,
+      });
       return res.status(400).json({ error: "Invalid status" });
     }
 
     if (!mongoose.Types.ObjectId.isValid(bookId)) {
+      console.warn("[admin:updateStatus] Invalid bookId format", {
+        bookId,
+      });
       return res.status(400).json({ error: "Invalid bookId format" });
     }
 
     const book = await Sellbooks.findById(bookId);
 
     if (!book) {
+      console.warn("[admin:updateStatus] Book not found", {
+        bookId,
+      });
       return res.status(404).json({ error: "Book not found" });
     }
 
@@ -260,6 +331,11 @@ const updateStatus = async (req, res) => {
       "user",
       "fullname email mobileNumber",
     );
+
+    console.log("[admin:updateStatus] Book status updated", {
+      bookId,
+      status,
+    });
 
     return res.status(200).json({
       success: true,
@@ -309,7 +385,14 @@ const uploadBookCategoryImage = async (req, res) => {
   try {
     const { categeory, subcategeory } = req.body;
 
+    console.log("[admin:uploadBookCategoryImage] Request received", {
+      categeory: categeory || "",
+      subcategeory: subcategeory || "",
+      hasFile: Boolean(req.file),
+    });
+
     if (!req.file) {
+      console.warn("[admin:uploadBookCategoryImage] Image file missing");
       return res.status(400).json({
         success: false,
         message: "Image file is required",
@@ -336,6 +419,7 @@ const uploadBookCategoryImage = async (req, res) => {
     const uploadedImage = await uploadToCloudinary(req.file.buffer, folderName);
 
     if (!uploadedImage?.secure_url) {
+      console.warn("[admin:uploadBookCategoryImage] Cloudinary upload failed");
       return res.status(500).json({
         success: false,
         message: "Cloudinary upload failed",
@@ -346,6 +430,11 @@ const uploadBookCategoryImage = async (req, res) => {
       categeory: categeory || "",
       subcategeory: subcategeory || "",
       image: uploadedImage.secure_url,
+      folderType,
+    });
+
+    console.log("[admin:uploadBookCategoryImage] Image uploaded", {
+      imageId: String(newImageDoc._id),
       folderType,
     });
 
@@ -368,11 +457,20 @@ const getBookCategoryImages = async (req, res) => {
   try {
     const { categeory, subcategeory } = req.query;
 
+    console.log("[admin:getBookCategoryImages] Request received", {
+      categeory: categeory || "",
+      subcategeory: subcategeory || "",
+    });
+
     const filter = {};
     if (categeory) filter.categeory = categeory;
     if (subcategeory) filter.subcategeory = subcategeory;
 
     const images = await BookCategoryImage.find(filter).sort({ createdAt: -1 });
+
+    console.log("[admin:getBookCategoryImages] Images fetched", {
+      totalImages: images.length,
+    });
 
     return res.status(200).json({
       success: true,
@@ -393,7 +491,14 @@ const deleteBookCategoryImage = async (req, res) => {
   try {
     const { id } = req.params;
 
+    console.log("[admin:deleteBookCategoryImage] Request received", {
+      id: id || "",
+    });
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.warn("[admin:deleteBookCategoryImage] Invalid image id", {
+        id,
+      });
       return res.status(400).json({
         success: false,
         message: "Invalid image id",
@@ -403,11 +508,18 @@ const deleteBookCategoryImage = async (req, res) => {
     const deleted = await BookCategoryImage.findByIdAndDelete(id);
 
     if (!deleted) {
+      console.warn("[admin:deleteBookCategoryImage] Image record not found", {
+        id,
+      });
       return res.status(404).json({
         success: false,
         message: "Image record not found",
       });
     }
+
+    console.log("[admin:deleteBookCategoryImage] Image record deleted", {
+      id,
+    });
 
     return res.status(200).json({
       success: true,

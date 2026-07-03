@@ -4,6 +4,12 @@ exports.getImages = async (req, res) => {
   try {
     const { categeory, subcategeory, folderType } = req.query;
 
+    console.log("[getImages] Request received", {
+      categeory: categeory || "",
+      subcategeory: subcategeory || "",
+      folderType: folderType || "",
+    });
+
     const filter = {};
 
     if (categeory && categeory.trim()) {
@@ -39,7 +45,7 @@ exports.getImages = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error("getImages error:", error);
+    console.error("[getImages] Error fetching images:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to fetch images",

@@ -16,7 +16,18 @@ const secretkey = process.env.SECRETKEY;
 const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
 
+  console.log("[usercontroller:Register] Request received", {
+    email: email || "",
+    mobileNumber: mobileNumber || "",
+  });
+
   if (!fullname || !mobileNumber || !email || !password) {
+    console.warn("[usercontroller:Register] Missing required fields", {
+      hasFullname: Boolean(fullname),
+      hasMobileNumber: Boolean(mobileNumber),
+      hasEmail: Boolean(email),
+      hasPassword: Boolean(password),
+    });
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -25,6 +36,10 @@ const Register = async (req, res) => {
     const mail = await User.findOne({ email });
 
     if (number || mail) {
+      console.warn("[usercontroller:Register] User already registered", {
+        email,
+        mobileNumber,
+      });
       return res.status(400).json({ error: "User already found" });
     }
 
@@ -37,6 +52,10 @@ const Register = async (req, res) => {
     });
 
     await newUser.save();
+    console.log("[usercontroller:Register] New user registered", {
+      userId: String(newUser._id),
+      email: newUser.email,
+    });
 
     try {
       await resend.emails.send({
@@ -57,9 +76,14 @@ const Register = async (req, res) => {
         `,
       });
 
-      console.log("Welcome email sent to:", newUser.email);
+      console.log("[usercontroller:Register] Welcome email sent", {
+        email: newUser.email,
+      });
     } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError);
+      console.error(
+        "[usercontroller:Register] Failed to send welcome email:",
+        emailError,
+      );
     }
 
     return res.status(201).json({
@@ -67,13 +91,17 @@ const Register = async (req, res) => {
       user: newUser,
     });
   } catch (error) {
-    console.error("Register error:", error);
+    console.error("[usercontroller:Register] Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const login = async (req, res) => {
   const { identifier, password } = req.body;
+
+  console.log("[usercontroller:login] Request received", {
+    identifier: identifier || "",
+  });
 
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -86,12 +114,18 @@ const login = async (req, res) => {
     } else if (phoneRegex.test(identifier)) {
       user = await User.findOne({ mobileNumber: identifier });
     } else {
+      console.warn("[usercontroller:login] Invalid identifier format", {
+        identifier,
+      });
       return res
         .status(400)
         .json({ success: false, error: "Invalid email or phone format" });
     }
 
     if (!user) {
+      console.warn("[usercontroller:login] User not found", {
+        identifier,
+      });
       return res
         .status(401)
         .json({ success: false, error: "Invalid username or password" });
@@ -99,6 +133,10 @@ const login = async (req, res) => {
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
+      console.warn("[usercontroller:login] Invalid password", {
+        userId: String(user._id),
+        email: user.email,
+      });
       return res
         .status(401)
         .json({ success: false, error: "Invalid username or password" });
@@ -116,6 +154,11 @@ const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    console.log("[usercontroller:login] Login successful", {
+      userId: String(user._id),
+      email: user.email,
+    });
+
     return res.status(200).json({
       success: true,
       token,
@@ -127,7 +170,7 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("[usercontroller:login] Error:", error);
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
@@ -143,7 +186,10 @@ const getPrintsById = async (req, res) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(400).json({ error: "User ID missing from token" });
+      console.warn("[usercontroller:getPrintsById] User ID missing from token");
+      return res.status(400).json({
+        error: "User ID missing from token",
+      });
     }
 
     const user = await User.findById(userId).select(
@@ -151,14 +197,30 @@ const getPrintsById = async (req, res) => {
     );
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      console.warn("[usercontroller:getPrintsById] No user found", {
+        userId: String(userId),
+      });
+      return res.status(404).json({
+        error: "User not found",
+      });
     }
+
+    console.log("[usercontroller:getPrintsById] Fetching print orders", {
+      userId: String(userId),
+      email: user.email,
+    });
 
     const orders = await Prints.find({ userid: userId })
       .select(
         "name mobile file originalprice discountprice color sides binding copies address college year section rollno description paymentMethod paymentStatus transactionId razorpayOrderId razorpayPaymentId razorpaySignature orderDate status createdAt updatedAt",
       )
       .sort({ orderDate: -1 });
+
+    console.log("[usercontroller:getPrintsById] Print orders fetched", {
+      userId: String(userId),
+      email: user.email,
+      totalOrders: orders.length,
+    });
 
     return res.status(200).json({
       user: {
@@ -196,8 +258,11 @@ const getPrintsById = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching user print orders:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("[usercontroller:getPrintsById] Error:", error);
+
+    return res.status(500).json({
+      error: "Internal server error",
+    });
   }
 };
 
@@ -206,6 +271,7 @@ const getBooksById = async (req, res) => {
     const userId = req.userId;
 
     if (!userId) {
+      console.warn("[usercontroller:getBooksById] User ID missing from token");
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
@@ -214,8 +280,16 @@ const getBooksById = async (req, res) => {
     );
 
     if (!user) {
+      console.warn("[usercontroller:getBooksById] User not found", {
+        userId: String(userId),
+      });
       return res.status(404).json({ error: "User not found" });
     }
+
+    console.log("[usercontroller:getBooksById] Fetching books", {
+      userId: String(userId),
+      email: user.email,
+    });
 
     const books = await Sellbooks.find({ user: userId })
       .select(
@@ -223,6 +297,11 @@ const getBooksById = async (req, res) => {
       )
       .sort({ date_added: -1 });
 
+    console.log("[usercontroller:getBooksById] Books fetched", {
+      userId: String(userId),
+      email: user.email,
+      totalBooks: books.length,
+    });
     return res.status(200).json({
       user: {
         fullname: user.fullname,
@@ -247,7 +326,7 @@ const getBooksById = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("[usercontroller:getBooksById] Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -256,7 +335,8 @@ const getProfile = async (req, res) => {
   try {
     const userId = req.userId;
 
-    if (!userId) { 
+    if (!userId) {
+      console.warn("[usercontroller:getProfile] User ID missing from token");
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
@@ -265,8 +345,16 @@ const getProfile = async (req, res) => {
     );
 
     if (!user) {
+      console.warn("[usercontroller:getProfile] User not found", {
+        userId: String(userId),
+      });
       return res.status(404).json({ error: "User not found" });
     }
+
+    console.log("[usercontroller:getProfile] Fetching profile", {
+      userId: String(userId),
+      email: user.email,
+    });
 
     const userData = user.toObject();
     const isEmpty = (v) =>
@@ -285,6 +373,13 @@ const getProfile = async (req, res) => {
         .select("name mobile address college year rollno section orderDate");
 
       if (firstOrder) {
+        console.log(
+          "[usercontroller:getProfile] Applying fallback from first order",
+          {
+            userId: String(userId),
+            email: user.email,
+          },
+        );
         userData.fullname = !isEmpty(userData.fullname)
           ? userData.fullname
           : firstOrder.name;
@@ -308,9 +403,14 @@ const getProfile = async (req, res) => {
       }
     }
 
+    console.log("[usercontroller:getProfile] Profile fetched", {
+      userId: String(userId),
+      email: user.email,
+    });
+
     return res.status(200).json(userData);
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("[usercontroller:getProfile] Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -318,6 +418,11 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   const userId = req.userId;
   const updates = req.body;
+
+  console.log("[usercontroller:updateProfile] Request received", {
+    userId: String(userId || ""),
+    updateKeys: Object.keys(updates || {}),
+  });
 
   const allowedFields = [
     "fullname",
@@ -338,10 +443,23 @@ const updateProfile = async (req, res) => {
   }
 
   if (Object.keys(validUpdates).length === 0) {
+    console.warn("[usercontroller:updateProfile] No valid fields provided", {
+      userId: String(userId || ""),
+    });
     return res.status(400).json({ error: "No valid fields provided" });
   }
 
   try {
+    const existingUser = await User.findById(userId).select(
+      "email fullname mobileNumber",
+    );
+
+    console.log("[usercontroller:updateProfile] Updating profile", {
+      userId: String(userId || ""),
+      email: existingUser?.email || "",
+      updateKeys: Object.keys(validUpdates),
+    });
+
     const orConditions = [];
     if (validUpdates.fullname) {
       orConditions.push({ fullname: validUpdates.fullname });
@@ -360,6 +478,9 @@ const updateProfile = async (req, res) => {
       });
 
       if (existing) {
+        console.warn("[usercontroller:updateProfile] Field already taken", {
+          userId: String(userId || ""),
+        });
         return res.status(400).json({ error: "Field already taken" });
       }
     }
@@ -371,15 +492,23 @@ const updateProfile = async (req, res) => {
     ).select("-password");
 
     if (!updatedUser) {
+      console.warn("[usercontroller:updateProfile] User not found", {
+        userId: String(userId || ""),
+      });
       return res.status(404).json({ error: "User not found" });
     }
+
+    console.log("[usercontroller:updateProfile] Profile updated", {
+      userId: String(userId || ""),
+      updateKeys: Object.keys(validUpdates),
+    });
 
     return res.status(200).json({
       message: "Profile updated successfully!",
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Update error:", error);
+    console.error("[usercontroller:updateProfile] Error:", error);
     return res.status(500).json({ error: "Update failed" });
   }
 };

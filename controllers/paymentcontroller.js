@@ -2,7 +2,7 @@ const Razorpay = require("razorpay");
 const Payment = require("../models/payments");
 const PrintsImport = require("../models/prints");
 const crypto = require("crypto");
-const User =require("../models/user.js");
+const User = require("../models/user.js");
 const Prints = PrintsImport.default || PrintsImport;
 
 function getEnvValue(primary, fallback) {
@@ -49,7 +49,13 @@ const createOrder = async (req, res) => {
     const userId = req.userId || req.user?._id;
     const { printOrderId } = req.body;
 
+    console.log("[paymentcontroller:createOrder] Request received", {
+      userId: userId ? String(userId) : "",
+      printOrderId: printOrderId || "",
+    });
+
     if (!userId) {
+      console.warn("[paymentcontroller:createOrder] Missing userId");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -57,6 +63,7 @@ const createOrder = async (req, res) => {
     }
 
     if (!printOrderId) {
+      console.warn("[paymentcontroller:createOrder] Missing printOrderId");
       return res.status(400).json({
         success: false,
         message: "printOrderId is required",
@@ -64,6 +71,7 @@ const createOrder = async (req, res) => {
     }
 
     if (!hasRazorpayKeys()) {
+      console.warn("[paymentcontroller:createOrder] Razorpay keys missing");
       return res.status(500).json({
         success: false,
         message: "Razorpay keys are not configured on the server",
@@ -73,6 +81,9 @@ const createOrder = async (req, res) => {
     const printOrder = await Prints.findById(printOrderId);
 
     if (!printOrder) {
+      console.warn("[paymentcontroller:createOrder] Print order not found", {
+        printOrderId,
+      });
       return res.status(404).json({
         success: false,
         message: "Print order not found",
@@ -80,6 +91,10 @@ const createOrder = async (req, res) => {
     }
 
     if (!printOrder.userid || String(printOrder.userid) !== String(userId)) {
+      console.warn("[paymentcontroller:createOrder] Not authorized", {
+        userId: String(userId),
+        printOrderId,
+      });
       return res.status(403).json({
         success: false,
         message: "Not authorized",
@@ -87,6 +102,9 @@ const createOrder = async (req, res) => {
     }
 
     if (printOrder.paymentStatus === "paid") {
+      console.log("[paymentcontroller:createOrder] Payment already completed", {
+        printOrderId,
+      });
       return res.status(400).json({
         success: false,
         message: "Payment already completed for this order",
@@ -105,6 +123,11 @@ const createOrder = async (req, res) => {
       discountedAmount > 0 ? discountedAmount : originalAmount;
 
     if (!finalAmount || Number.isNaN(finalAmount) || finalAmount <= 0) {
+      console.warn("[paymentcontroller:createOrder] Invalid order amount", {
+        printOrderId,
+        originalAmount,
+        discountedAmount,
+      });
       return res.status(400).json({
         success: false,
         message: "Invalid order amount",
@@ -125,6 +148,14 @@ const createOrder = async (req, res) => {
         printOrder.paymentStatus = "pending";
         await printOrder.save();
       }
+
+      console.log(
+        "[paymentcontroller:createOrder] Reusing existing Razorpay order",
+        {
+          printOrderId,
+          razorpayOrderId: existingPendingPayment.razorpayOrderId,
+        },
+      );
 
       return res.status(200).json({
         success: true,
@@ -158,6 +189,13 @@ const createOrder = async (req, res) => {
       finalAmount,
       currency: "INR",
       status: "created",
+    });
+
+    console.log("[paymentcontroller:createOrder] Razorpay order created", {
+      printOrderId,
+      razorpayOrderId: razorpayOrder.id,
+      paymentId: String(payment._id),
+      amountInPaise,
     });
 
     printOrder.razorpayOrderId = razorpayOrder.id;
@@ -196,7 +234,15 @@ const verifyPayment = async (req, res) => {
       razorpay_signature,
     } = req.body;
 
+    console.log("[paymentcontroller:verifyPayment] Request received", {
+      userId: userId ? String(userId) : "",
+      printOrderId: printOrderId || "",
+      razorpay_order_id: razorpay_order_id || "",
+      razorpay_payment_id: razorpay_payment_id || "",
+    });
+
     if (!userId) {
+      console.warn("[paymentcontroller:verifyPayment] Missing userId");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -209,6 +255,7 @@ const verifyPayment = async (req, res) => {
       !razorpay_payment_id ||
       !razorpay_signature
     ) {
+      console.warn("[paymentcontroller:verifyPayment] Missing payment details");
       return res.status(400).json({
         success: false,
         message: "Missing payment details",
@@ -216,6 +263,7 @@ const verifyPayment = async (req, res) => {
     }
 
     if (!RAZORPAY_KEY_SECRET) {
+      console.warn("[paymentcontroller:verifyPayment] Razorpay secret missing");
       return res.status(500).json({
         success: false,
         message: "Razorpay secret is not configured on the server",
@@ -225,6 +273,9 @@ const verifyPayment = async (req, res) => {
     const printOrder = await Prints.findById(printOrderId);
 
     if (!printOrder) {
+      console.warn("[paymentcontroller:verifyPayment] Print order not found", {
+        printOrderId,
+      });
       return res.status(404).json({
         success: false,
         message: "Print order not found",
@@ -232,6 +283,10 @@ const verifyPayment = async (req, res) => {
     }
 
     if (!printOrder.userid || String(printOrder.userid) !== String(userId)) {
+      console.warn("[paymentcontroller:verifyPayment] Not authorized", {
+        userId: String(userId),
+        printOrderId,
+      });
       return res.status(403).json({
         success: false,
         message: "Not authorized",
@@ -239,6 +294,12 @@ const verifyPayment = async (req, res) => {
     }
 
     if (printOrder.paymentStatus === "paid") {
+      console.log(
+        "[paymentcontroller:verifyPayment] Payment already verified",
+        {
+          printOrderId,
+        },
+      );
       return res.status(200).json({
         success: true,
         message: "Payment already verified",
@@ -252,6 +313,11 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
+      console.warn("[paymentcontroller:verifyPayment] Signature mismatch", {
+        printOrderId,
+        razorpay_order_id,
+        razorpay_payment_id,
+      });
       await Payment.findOneAndUpdate(
         { razorpayOrderId: razorpay_order_id },
         {
@@ -340,6 +406,12 @@ const verifyPayment = async (req, res) => {
       await payment.save();
     }
 
+    console.log("[paymentcontroller:verifyPayment] Payment verified", {
+      printOrderId,
+      razorpay_order_id,
+      razorpay_payment_id,
+    });
+
     printOrder.paymentStatus = "paid";
     printOrder.paymentMethod = "Razorpay";
     printOrder.razorpayOrderId = razorpay_order_id;
@@ -369,7 +441,14 @@ const paymentFailed = async (req, res) => {
     const userId = req.userId || req.user?._id;
     const { printOrderId, razorpayOrderId } = req.body;
 
+    console.log("[paymentcontroller:paymentFailed] Request received", {
+      userId: userId ? String(userId) : "",
+      printOrderId: printOrderId || "",
+      razorpayOrderId: razorpayOrderId || "",
+    });
+
     if (!userId) {
+      console.warn("[paymentcontroller:paymentFailed] Missing userId");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -377,6 +456,7 @@ const paymentFailed = async (req, res) => {
     }
 
     if (!printOrderId || !razorpayOrderId) {
+      console.warn("[paymentcontroller:paymentFailed] Missing order details");
       return res.status(400).json({
         success: false,
         message: "Missing order details",
@@ -386,6 +466,9 @@ const paymentFailed = async (req, res) => {
     const printOrder = await Prints.findById(printOrderId);
 
     if (!printOrder) {
+      console.warn("[paymentcontroller:paymentFailed] Print order not found", {
+        printOrderId,
+      });
       return res.status(404).json({
         success: false,
         message: "Print order not found",
@@ -393,6 +476,10 @@ const paymentFailed = async (req, res) => {
     }
 
     if (!printOrder.userid || String(printOrder.userid) !== String(userId)) {
+      console.warn("[paymentcontroller:paymentFailed] Not authorized", {
+        userId: String(userId),
+        printOrderId,
+      });
       return res.status(403).json({
         success: false,
         message: "Not authorized",
@@ -409,6 +496,11 @@ const paymentFailed = async (req, res) => {
     printOrder.razorpayOrderId = razorpayOrderId;
     await printOrder.save();
     const user = await User.findById(printOrder.userid);
+
+    console.log("[paymentcontroller:paymentFailed] Payment marked failed", {
+      printOrderId,
+      razorpayOrderId,
+    });
 
     const paymentFailedHtml = `
   <h2>❌ Payment Failed</h2>

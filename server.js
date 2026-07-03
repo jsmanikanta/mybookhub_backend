@@ -19,23 +19,40 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-   origin: [
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+
+  res.on("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    console.log(
+      `[server] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${durationMs}ms)`,
+    );
+  });
+
+  next();
+});
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
       "https://mybookhub.store",
-      "https://printkart.mybookhub.store"
-   ],
-   credentials: true
-}));
+      "https://printkart.mybookhub.store",
+    ],
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+console.log("[server] Connecting to database");
 mongoose
   .connect(process.env.database)
-  .then(() => console.log("Database connected successfully"))
-  .catch((err) => console.error("Database connection error:", err));
+  .then(() => console.log("[server] Database connected successfully"))
+  .catch((err) => console.error("[server] Database connection error:", err));
 
 app.use("/user", userroute);
 app.use("/orders", orders);
@@ -54,5 +71,5 @@ app.get("/", (req, res) => {
 
 const port = process.env.PORT || 5000;
 app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`[server] Server running on port ${port}`);
 });

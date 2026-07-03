@@ -19,9 +19,7 @@ const userschema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  birthday: {
-    type: Date,
-  },
+  
   usertype: {
     type: String,
     enum: ["vendor", "user"],

@@ -8,7 +8,13 @@ const resend = process.env.RESEND_API_KEY
 
 const verifyCoupon = async (req, res) => {
   try {
+    console.log("[couponstatus:verifyCoupon] Request received", {
+      userId: req.userId || req.user?._id || req.user?.id || "",
+      hasCode: Boolean(req.body?.code),
+    });
+
     if (mongoose.connection.readyState !== 1) {
+      console.warn("[couponstatus:verifyCoupon] Database not ready");
       return res.status(503).json({
         success: false,
         error: "Database not ready",
@@ -23,6 +29,7 @@ const verifyCoupon = async (req, res) => {
     const { code } = req.body || {};
 
     if (!userId) {
+      console.warn("[couponstatus:verifyCoupon] User not authenticated");
       return res.status(401).json({
         success: false,
         error: "User not authenticated",
@@ -30,6 +37,7 @@ const verifyCoupon = async (req, res) => {
     }
 
     if (!code || !String(code).trim()) {
+      console.warn("[couponstatus:verifyCoupon] Coupon code missing");
       return res.status(400).json({
         success: false,
         error: "Coupon code required",
@@ -43,6 +51,9 @@ const verifyCoupon = async (req, res) => {
       .findOne({ code: couponCode, active: true });
 
     if (!couponDoc) {
+      console.warn("[couponstatus:verifyCoupon] Coupon not found", {
+        couponCode,
+      });
       return res.status(404).json({
         success: false,
         status: "invalid",
@@ -60,6 +71,10 @@ const verifyCoupon = async (req, res) => {
 
     if (couponCode !== "MANAPRINTKART") {
       if (existingStatus && existingStatus.status === true) {
+        console.log("[couponstatus:verifyCoupon] Coupon already used", {
+          userId: String(userId),
+          couponCode,
+        });
         return res.status(200).json({
           success: true,
           status: "used",
@@ -95,6 +110,12 @@ const verifyCoupon = async (req, res) => {
       await existingStatus.save();
     }
 
+    console.log("[couponstatus:verifyCoupon] Coupon applied", {
+      userId: String(userId),
+      couponCode,
+      discount,
+    });
+
     await mongoose.connection
       .collection("couponCodes")
       .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
@@ -114,6 +135,10 @@ const verifyCoupon = async (req, res) => {
             <p>Thank you for using <b>MyBookHub</b>.</p>
             <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
           `,
+        });
+        console.log("[couponstatus:verifyCoupon] Coupon email sent", {
+          email,
+          couponCode,
         });
       } catch (err) {
         console.error("Coupon email error:", err);
@@ -142,6 +167,12 @@ const verifyCoupon = async (req, res) => {
 
 const applyCoupon = async (amount, couponCode, userId) => {
   try {
+    console.log("[couponstatus:applyCoupon] Request received", {
+      hasCouponCode: Boolean(couponCode),
+      userId: userId ? String(userId) : "",
+      amount,
+    });
+
     if (!couponCode) {
       return { discount: 0, finalAmount: amount };
     }
@@ -156,6 +187,9 @@ const applyCoupon = async (amount, couponCode, userId) => {
       });
 
     if (!couponDoc) {
+      console.warn("[couponstatus:applyCoupon] Coupon not found", {
+        couponCode: normalizedCode,
+      });
       return { discount: 0, finalAmount: amount };
     }
 
@@ -167,6 +201,10 @@ const applyCoupon = async (amount, couponCode, userId) => {
       });
 
       if (used) {
+        console.log("[couponstatus:applyCoupon] Coupon already used", {
+          userId: String(userId || ""),
+          couponCode: normalizedCode,
+        });
         return { discount: 0, finalAmount: amount };
       }
     }

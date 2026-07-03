@@ -67,7 +67,14 @@ const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    console.log("[buyBooksController:getBookById] Request received", {
+      bookId: id || "",
+    });
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.warn("[buyBooksController:getBookById] Invalid book ID", {
+        bookId: id,
+      });
       return res.status(400).json({
         success: false,
         message: "Invalid book ID",
@@ -81,11 +88,18 @@ const getBookById = async (req, res) => {
     }).populate("user", "fullname email mobileNumber");
 
     if (!book) {
+      console.warn("[buyBooksController:getBookById] Book not found", {
+        bookId: id,
+      });
       return res.status(404).json({
         success: false,
         message: "Book not found",
       });
     }
+
+    console.log("[buyBooksController:getBookById] Book fetched", {
+      bookId: id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -105,9 +119,18 @@ const getAllBooks = async (req, res) => {
   try {
     const { sortBy } = req.query;
 
+    console.log("[buyBooksController:getAllBooks] Request received", {
+      sortBy: sortBy || "latest",
+    });
+
     const books = await Sellbooks.find(buildBaseFilter())
       .populate("user", "fullname email mobileNumber")
       .sort(getSortObject(sortBy));
+
+    console.log("[buyBooksController:getAllBooks] Books fetched", {
+      totalBooks: books.length,
+      sortBy: sortBy || "latest",
+    });
 
     return res.status(200).json({
       success: true,
@@ -137,6 +160,18 @@ const getBooksByFilter = async (req, res) => {
       sortBy,
       search,
     } = req.query;
+
+    console.log("[buyBooksController:getBooksByFilter] Request received", {
+      categeory: categeory || "",
+      subcategeory: subcategeory || "",
+      district: district || "",
+      condition: condition || "",
+      selltype: selltype || "",
+      minPrice: minPrice || "",
+      maxPrice: maxPrice || "",
+      sortBy: sortBy || "latest",
+      search: search || "",
+    });
 
     const filter = buildBaseFilter();
 
@@ -185,6 +220,13 @@ const getBooksByFilter = async (req, res) => {
           : Number.MAX_SAFE_INTEGER;
 
       if (Number.isNaN(min) || Number.isNaN(max)) {
+        console.warn(
+          "[buyBooksController:getBooksByFilter] Invalid price range",
+          {
+            minPrice,
+            maxPrice,
+          },
+        );
         return res.status(400).json({
           success: false,
           message: "minPrice and maxPrice must be valid numbers",
@@ -195,6 +237,10 @@ const getBooksByFilter = async (req, res) => {
         (book) => book.updatedPrice >= min && book.updatedPrice <= max,
       );
     }
+
+    console.log("[buyBooksController:getBooksByFilter] Books fetched", {
+      totalBooks: formattedBooks.length,
+    });
 
     return res.status(200).json({
       success: true,

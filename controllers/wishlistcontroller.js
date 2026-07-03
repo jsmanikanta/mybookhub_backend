@@ -7,7 +7,13 @@ const addToWishlist = async (req, res) => {
     const userId = req.userId;
     const { bookId } = req.body;
 
+    console.log("[wishlistcontroller:addToWishlist] Request received", {
+      userId: userId ? String(userId) : "",
+      bookId: bookId || "",
+    });
+
     if (!userId) {
+      console.warn("[wishlistcontroller:addToWishlist] Unauthorized");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -15,6 +21,9 @@ const addToWishlist = async (req, res) => {
     }
 
     if (!bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
+      console.warn("[wishlistcontroller:addToWishlist] Invalid bookId", {
+        bookId,
+      });
       return res.status(400).json({
         success: false,
         message: "Valid bookId is required",
@@ -25,6 +34,9 @@ const addToWishlist = async (req, res) => {
       "_id status soldstatus",
     );
     if (!book) {
+      console.warn("[wishlistcontroller:addToWishlist] Book not found", {
+        bookId,
+      });
       return res.status(404).json({
         success: false,
         message: "Book not found",
@@ -32,6 +44,11 @@ const addToWishlist = async (req, res) => {
     }
 
     if (book.status !== "Accepted" || book.soldstatus === "Soldout") {
+      console.warn("[wishlistcontroller:addToWishlist] Book not available", {
+        bookId,
+        status: book.status,
+        soldstatus: book.soldstatus,
+      });
       return res.status(400).json({
         success: false,
         message: "Only available accepted books can be added to wishlist",
@@ -40,6 +57,13 @@ const addToWishlist = async (req, res) => {
 
     const existing = await Wishlist.findOne({ user: userId, book: bookId });
     if (existing) {
+      console.log(
+        "[wishlistcontroller:addToWishlist] Book already in wishlist",
+        {
+          userId: String(userId),
+          bookId,
+        },
+      );
       return res.status(200).json({
         success: true,
         message: "Book already in wishlist",
@@ -50,6 +74,12 @@ const addToWishlist = async (req, res) => {
     const wishlistItem = await Wishlist.create({
       user: userId,
       book: bookId,
+    });
+
+    console.log("[wishlistcontroller:addToWishlist] Book added", {
+      userId: String(userId),
+      bookId,
+      wishlistId: String(wishlistItem._id),
     });
 
     return res.status(201).json({
@@ -72,7 +102,13 @@ const removeFromWishlist = async (req, res) => {
     const userId = req.userId;
     const { bookId } = req.params;
 
+    console.log("[wishlistcontroller:removeFromWishlist] Request received", {
+      userId: userId ? String(userId) : "",
+      bookId: bookId || "",
+    });
+
     if (!userId) {
+      console.warn("[wishlistcontroller:removeFromWishlist] Unauthorized");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -80,6 +116,9 @@ const removeFromWishlist = async (req, res) => {
     }
 
     if (!bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
+      console.warn("[wishlistcontroller:removeFromWishlist] Invalid bookId", {
+        bookId,
+      });
       return res.status(400).json({
         success: false,
         message: "Valid bookId is required",
@@ -92,11 +131,23 @@ const removeFromWishlist = async (req, res) => {
     });
 
     if (!deleted) {
+      console.warn(
+        "[wishlistcontroller:removeFromWishlist] Book not found in wishlist",
+        {
+          userId: String(userId),
+          bookId,
+        },
+      );
       return res.status(404).json({
         success: false,
         message: "Book not found in wishlist",
       });
     }
+
+    console.log("[wishlistcontroller:removeFromWishlist] Book removed", {
+      userId: String(userId),
+      bookId,
+    });
 
     return res.status(200).json({
       success: true,
@@ -116,7 +167,12 @@ const getMyWishlist = async (req, res) => {
   try {
     const userId = req.userId;
 
+    console.log("[wishlistcontroller:getMyWishlist] Request received", {
+      userId: userId ? String(userId) : "",
+    });
+
     if (!userId) {
+      console.warn("[wishlistcontroller:getMyWishlist] Unauthorized");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -138,6 +194,11 @@ const getMyWishlist = async (req, res) => {
         item.book.soldstatus !== "Soldout",
     );
 
+    console.log("[wishlistcontroller:getMyWishlist] Wishlist fetched", {
+      userId: String(userId),
+      totalItems: filteredWishlist.length,
+    });
+
     return res.status(200).json({
       success: true,
       count: filteredWishlist.length,
@@ -158,7 +219,13 @@ const isBookWishlisted = async (req, res) => {
     const userId = req.userId;
     const { bookId } = req.params;
 
+    console.log("[wishlistcontroller:isBookWishlisted] Request received", {
+      userId: userId ? String(userId) : "",
+      bookId: bookId || "",
+    });
+
     if (!userId) {
+      console.warn("[wishlistcontroller:isBookWishlisted] Unauthorized");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -166,6 +233,9 @@ const isBookWishlisted = async (req, res) => {
     }
 
     if (!bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
+      console.warn("[wishlistcontroller:isBookWishlisted] Invalid bookId", {
+        bookId,
+      });
       return res.status(400).json({
         success: false,
         message: "Valid bookId is required",
@@ -196,7 +266,13 @@ const toggleWishlist = async (req, res) => {
     const userId = req.userId;
     const { bookId } = req.body;
 
+    console.log("[wishlistcontroller:toggleWishlist] Request received", {
+      userId: userId ? String(userId) : "",
+      bookId: bookId || "",
+    });
+
     if (!userId) {
+      console.warn("[wishlistcontroller:toggleWishlist] Unauthorized");
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -204,6 +280,9 @@ const toggleWishlist = async (req, res) => {
     }
 
     if (!bookId || !mongoose.Types.ObjectId.isValid(bookId)) {
+      console.warn("[wishlistcontroller:toggleWishlist] Invalid bookId", {
+        bookId,
+      });
       return res.status(400).json({
         success: false,
         message: "Valid bookId is required",
@@ -214,6 +293,9 @@ const toggleWishlist = async (req, res) => {
       "_id status soldstatus",
     );
     if (!book) {
+      console.warn("[wishlistcontroller:toggleWishlist] Book not found", {
+        bookId,
+      });
       return res.status(404).json({
         success: false,
         message: "Book not found",
@@ -221,6 +303,11 @@ const toggleWishlist = async (req, res) => {
     }
 
     if (book.status !== "Accepted" || book.soldstatus === "Soldout") {
+      console.warn("[wishlistcontroller:toggleWishlist] Book not available", {
+        bookId,
+        status: book.status,
+        soldstatus: book.soldstatus,
+      });
       return res.status(400).json({
         success: false,
         message: "Only available accepted books can be wishlisted",
@@ -231,6 +318,11 @@ const toggleWishlist = async (req, res) => {
 
     if (existing) {
       await Wishlist.deleteOne({ _id: existing._id });
+
+      console.log("[wishlistcontroller:toggleWishlist] Book removed", {
+        userId: String(userId),
+        bookId,
+      });
 
       return res.status(200).json({
         success: true,
@@ -243,6 +335,11 @@ const toggleWishlist = async (req, res) => {
     await Wishlist.create({
       user: userId,
       book: bookId,
+    });
+
+    console.log("[wishlistcontroller:toggleWishlist] Book added", {
+      userId: String(userId),
+      bookId,
     });
 
     return res.status(201).json({

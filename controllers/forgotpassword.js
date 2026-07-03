@@ -7,7 +7,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const resetPasswordWithoutOTP = async (req, res) => {
   const { identifier, newPassword } = req.body;
 
+  console.log("[forgotpassword:resetPasswordWithoutOTP] Request received", {
+    identifier: identifier || "",
+  });
+
   if (!identifier || !newPassword) {
+    console.warn("[forgotpassword:resetPasswordWithoutOTP] Missing fields");
     return res
       .status(400)
       .json({ error: "Identifier and new password are required" });
@@ -23,17 +28,31 @@ const resetPasswordWithoutOTP = async (req, res) => {
     } else if (phoneRegex.test(identifier)) {
       user = await User.findOne({ mobileNumber: identifier });
     } else {
+      console.warn(
+        "[forgotpassword:resetPasswordWithoutOTP] Invalid identifier format",
+        {
+          identifier,
+        },
+      );
       return res
         .status(400)
         .json({ error: "Invalid email or phone number format" });
     }
 
     if (!user) {
+      console.warn("[forgotpassword:resetPasswordWithoutOTP] User not found", {
+        identifier,
+      });
       return res.status(404).json({ error: "User not found" });
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
+
+    console.log("[forgotpassword:resetPasswordWithoutOTP] Password updated", {
+      userId: String(user._id),
+      email: user.email,
+    });
 
     try {
       await resend.emails.send({
@@ -57,14 +76,22 @@ const resetPasswordWithoutOTP = async (req, res) => {
         `,
       });
 
-      console.log("Password reset email sent to:", user.email);
+      console.log(
+        "[forgotpassword:resetPasswordWithoutOTP] Password reset email sent",
+        {
+          email: user.email,
+        },
+      );
     } catch (emailError) {
-      console.error("Failed to send password reset email:", emailError);
+      console.error(
+        "[forgotpassword:resetPasswordWithoutOTP] Failed to send password reset email:",
+        emailError,
+      );
     }
 
     return res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
-    console.error("Error resetting password without OTP:", error);
+    console.error("[forgotpassword:resetPasswordWithoutOTP] Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
