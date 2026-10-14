@@ -209,11 +209,14 @@ const applyCoupon = async (amount, couponCode, userId) => {
       }
     }
 
-    const discount = Number(couponDoc.discount) || 0;
-    const finalAmount = Math.max(Number(amount || 0) - discount, 0);
+    const discountPercentage = Number(couponDoc.discount) || 0;
+    const numericAmount = Number(amount || 0);
+    const discountAmount = Math.round((numericAmount * discountPercentage) / 100);
+    const finalAmount = Math.max(numericAmount - discountAmount, 0);
 
     return {
-      discount,
+      discount: discountAmount, // Returns the actual calculated ₹ discount
+      percentage: discountPercentage, // Optional: keeps track of the %
       finalAmount,
     };
   } catch (err) {
