@@ -209,14 +209,23 @@ const applyCoupon = async (amount, couponCode, userId) => {
       }
     }
 
-    const discountPercentage = Number(couponDoc.discount) || 0;
+    const rawDiscountValue = Number(couponDoc.discount) || 0;
     const numericAmount = Number(amount || 0);
-    const discountAmount = Math.round((numericAmount * discountPercentage) / 100);
+
+    let discountAmount = 0;
+
+    // 🔥 Smart check: If discount value > 100, treat as flat rupees. Otherwise, treat as percentage.
+    if (rawDiscountValue > 100) {
+      discountAmount = Math.min(rawDiscountValue, numericAmount); // Cannot discount more than total amount
+    } else {
+      discountAmount = Math.round((numericAmount * rawDiscountValue) / 100);
+    }
+
     const finalAmount = Math.max(numericAmount - discountAmount, 0);
 
     return {
-      discount: discountAmount, // Returns the actual calculated ₹ discount
-      percentage: discountPercentage, // Optional: keeps track of the %
+      discount: discountAmount, // Returns the final rupee discount calculated
+      rawDiscount: rawDiscountValue,
       finalAmount,
     };
   } catch (err) {
@@ -227,7 +236,6 @@ const applyCoupon = async (amount, couponCode, userId) => {
     };
   }
 };
-
 module.exports = {
   verifyCoupon,
   applyCoupon,
