@@ -24,6 +24,9 @@ const couponStatusSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    usedCount: {
+      type: Number,
+    },
     userName: {
       type: String,
       default: "",
