@@ -25,6 +25,93 @@ const uploadToCloudinary = async (buffer, folderName) => {
   });
 };
 
+// Resend reports most failures in the returned `error` instead of throwing
+const sendEmail = async (payload, label) => {
+  try {
+    const { error } = await resend.emails.send(payload);
+    if (error) {
+      console.error(`[orderprints:sendEmail] ${label} failed`, error);
+      return false;
+    }
+    console.log(`[orderprints:sendEmail] ${label} sent`);
+    return true;
+  } catch (err) {
+    console.error(`[orderprints:sendEmail] ${label} failed`, err);
+    return false;
+  }
+};
+
+const sendOrderPlacedEmails = async (order, email) => {
+  const adminEmailHtml = `
+    <h2>New print order placed by ${order.name}</h2>
+
+    <h3>Order Details:</h3>
+    <ul>
+      <li><b>Name:</b> ${order.name}</li>
+      <li><b>Mobile:</b> ${order.mobile}</li>
+      <li><b>Color:</b> ${order.color}</li>
+      <li><b>Sides:</b> ${order.sides}</li>
+      <li><b>Binding:</b> ${order.binding}</li>
+      <li><b>Copies:</b> ${order.copies}</li>
+      <li><b>Original Price:</b> ${order.originalprice}</li>
+      <li><b>Discount Price:</b> ${order.discountprice ?? "N/A"}</li>
+      <li><b>Address:</b> ${order.address || "N/A"}</li>
+      <li><b>College Info:</b> ${order.college || "N/A"}, ${order.year || "N/A"}, ${order.section || "N/A"}, ${order.rollno || "N/A"}</li>
+      <li><b>Description:</b> ${order.description || "N/A"}</li>
+      <li><b>Payment Method:</b> ${order.paymentMethod}</li>
+      <li><b>Payment Status:</b> ${order.paymentStatus}</li>
+      <li><b>Order Status:</b> ${order.status}</li>
+    </ul>
+
+    <p><b>Order Date:</b> ${order.orderDate.toLocaleString()}</p>
+    <p><a href="${order.file}" target="_blank">View Print File</a></p>
+  `;
+
+  await sendEmail(
+    {
+      from: "Admin <admin@mybookhub.store>",
+      to: "printkart0001@gmail.com",
+      subject: "New Print Order Placed - MyBookHub",
+      html: adminEmailHtml,
+    },
+    "Admin order email",
+  );
+
+  if (!email) return;
+
+  await sendEmail(
+    {
+      from: "MyBookHub <admin@mybookhub.store>",
+      to: email,
+      subject: "Thank You for Your Print Order",
+      html: `
+        <h2>Hello ${order.name},</h2>
+
+        <p>Thank you for placing your print order with <b>MyBookHub</b>.</p>
+
+        <ul>
+          <li><b>Order Status:</b> ${order.status}</li>
+          <li><b>Payment Method:</b> ${order.paymentMethod}</li>
+          <li><b>Copies:</b> ${order.copies}</li>
+          <li><b>Binding:</b> ${order.binding}</li>
+          <li><b>Color:</b> ${order.color}</li>
+          <li><b>Sides:</b> ${order.sides}</li>
+        </ul>
+
+        ${
+          order.paymentMethod === "Pay on Delivery"
+            ? `<p>You can pay at delivery.</p>`
+            : `<p>Your Razorpay payment has been received.</p>`
+        }
+
+        <p>Best regards,<br/><b>The MyBookHub Team</b></p>
+        <h4>Support: <a href="mailto:support@mybookhub.store">support@mybookhub.store</a></h4>
+      `,
+    },
+    "User order email",
+  );
+};
+
 const orderPrint = async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;
@@ -173,77 +260,9 @@ const orderPrint = async (req, res) => {
       paymentMethod: newOrder.paymentMethod,
     });
 
-    const adminEmailHtml = `
-      <h2>New print order placed by ${newOrder.name}</h2>
-
-      <h3>Order Details:</h3>
-      <ul>
-        <li><b>Name:</b> ${newOrder.name}</li>
-        <li><b>Mobile:</b> ${newOrder.mobile}</li>
-        <li><b>Color:</b> ${newOrder.color}</li>
-        <li><b>Sides:</b> ${newOrder.sides}</li>
-        <li><b>Binding:</b> ${newOrder.binding}</li>
-        <li><b>Copies:</b> ${newOrder.copies}</li>
-        <li><b>Original Price:</b> ${newOrder.originalprice}</li>
-        <li><b>Discount Price:</b> ${newOrder.discountprice ?? "N/A"}</li>
-        <li><b>Address:</b> ${newOrder.address || "N/A"}</li>
-        <li><b>College Info:</b> ${newOrder.college || "N/A"}, ${newOrder.year || "N/A"}, ${newOrder.section || "N/A"}, ${newOrder.rollno || "N/A"}</li>
-        <li><b>Description:</b> ${newOrder.description || "N/A"}</li>
-        <li><b>Payment Method:</b> ${newOrder.paymentMethod}</li>
-        <li><b>Payment Status:</b> ${newOrder.paymentStatus}</li>
-        <li><b>Order Status:</b> ${newOrder.status}</li>
-      </ul>
-
-      <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
-      <p><a href="${uploadedPrint.secure_url}" target="_blank">View Print File</a></p>
-    `;
-
-    await resend.emails.send({
-      from: "Admin <admin@mybookhub.store>",
-      to: "printkart0001@gmail.com",
-      subject: "New Print Order Placed - MyBookHub",
-      html: adminEmailHtml,
-    });
-    console.log("[orderprints:orderPrint] Admin notification sent", {
-      orderId: String(newOrder._id),
-    });
-
-    try {
-      await resend.emails.send({
-        from: "MyBookHub <admin@mybookhub.store>",
-        to: email,
-        subject: "Thank You for Your Print Order",
-        html: `
-          <h2>Hello ${name},</h2>
-
-          <p>Thank you for placing your print order with <b>MyBookHub</b>.</p>
-
-          <ul>
-            <li><b>Order Status:</b> ${newOrder.status}</li>
-            <li><b>Payment Method:</b> ${newOrder.paymentMethod}</li>
-            <li><b>Copies:</b> ${newOrder.copies}</li>
-            <li><b>Binding:</b> ${newOrder.binding}</li>
-            <li><b>Color:</b> ${newOrder.color}</li>
-            <li><b>Sides:</b> ${newOrder.sides}</li>
-          </ul>
-
-          ${
-            newOrder.paymentMethod === "Pay on Delivery"
-              ? `<p>You can pay at delivery.</p>`
-              : `<p>Please complete your payment via Razorpay.</p>`
-          }
-
-          <p>Best regards,<br/><b>The MyBookHub Team</b></p>
-          <h4>Support: <a href="mailto:support@mybookhub.store">support@mybookhub.store</a></h4>
-        `,
-      });
-
-      console.log("[orderprints:orderPrint] User notification sent", {
-        orderId: String(newOrder._id),
-        email: email || "",
-      });
-    } catch (emailError) {
-      console.error("Email error:", emailError);
+    // Razorpay orders are emailed from verifyPayment, once payment succeeds
+    if (newOrder.paymentMethod === "Pay on Delivery") {
+      await sendOrderPlacedEmails(newOrder, email);
     }
 
     console.log("[orderprints:orderPrint] Request completed", {
@@ -422,4 +441,6 @@ const cancelOrder = async (req, res) => {
 module.exports = {
   orderPrint,
   cancelOrder,
+  sendEmail,
+  sendOrderPlacedEmails,
 };
