@@ -2,7 +2,6 @@ const Razorpay = require("razorpay");
 const Payment = require("../models/payments");
 const PrintsImport = require("../models/prints");
 const crypto = require("crypto");
-const User = require("../models/user.js");
 const Prints = PrintsImport.default || PrintsImport;
 
 function getEnvValue(primary, fallback) {
@@ -14,9 +13,7 @@ const RAZORPAY_KEY_SECRET = getEnvValue(
   "RAZORPAY_KEY_SECRET",
   "RAZORPAY_SECRET",
 );
-const { Resend } = require("resend");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const { sendEmail, sendOrderPlacedEmails } = require("./orderprints");
 
 function hasRazorpayKeys() {
   return Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET);
@@ -332,31 +329,6 @@ const verifyPayment = async (req, res) => {
       printOrder.razorpaySignature = razorpay_signature;
       printOrder.transactionId = razorpay_payment_id;
       await printOrder.save();
-      const user = await User.findById(printOrder.userid);
-
-      const paymentDetailsHtml = `
-  <h2>💰 Payment Successful</h2>
-
-  <h3>Payment Details:</h3>
-  <ul>
-    <li><b>Payment Method:</b> Razorpay</li>
-    <li><b>Payment Status:</b> <span style="color: green;"><b>PAID</b></span></li>
-    <li><b>Transaction ID:</b> ${printOrder.transactionId}</li>
-    <li><b>Razorpay Order ID:</b> ${printOrder.razorpayOrderId}</li>
-    <li><b>Razorpay Payment ID:</b> ${printOrder.razorpayPaymentId}</li>
-    <li><b>Amount:</b> ${printOrder.originalprice}</li>
-    <li><b>Discount:</b> ${Math.max(printOrder.originalprice - (printOrder.discountprice || printOrder.originalprice), 0)}</li>
-    <li><b>Final Paid Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
-    <li><b>Currency:</b> INR</li>
-    <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
-  </ul>
-`;
-      await resend.emails.send({
-        from: "PrintKart <payments@mybookhub.store>",
-        to: user.email,
-        subject: "Payment Successful - PrintKart",
-        html: paymentDetailsHtml,
-      });
 
       return res.status(400).json({
         success: false,
@@ -418,7 +390,42 @@ const verifyPayment = async (req, res) => {
     printOrder.razorpayPaymentId = razorpay_payment_id;
     printOrder.razorpaySignature = razorpay_signature;
     printOrder.transactionId = razorpay_payment_id;
+    // A failed attempt cancels the order, but Razorpay's popup allows a retry
+    if (printOrder.status === "Cancelled") {
+      printOrder.status = "Order placed";
+    }
     await printOrder.save();
+
+    const userEmail = req.user?.email;
+    await sendOrderPlacedEmails(printOrder, userEmail);
+
+    if (userEmail) {
+      await sendEmail(
+        {
+          from: "PrintKart <payments@mybookhub.store>",
+          to: userEmail,
+          subject: "Payment Successful - PrintKart",
+          html: `
+            <h2>💰 Payment Successful</h2>
+
+            <h3>Payment Details:</h3>
+            <ul>
+              <li><b>Payment Method:</b> Razorpay</li>
+              <li><b>Payment Status:</b> <span style="color: green;"><b>PAID</b></span></li>
+              <li><b>Transaction ID:</b> ${printOrder.transactionId}</li>
+              <li><b>Razorpay Order ID:</b> ${printOrder.razorpayOrderId}</li>
+              <li><b>Razorpay Payment ID:</b> ${printOrder.razorpayPaymentId}</li>
+              <li><b>Amount:</b> ${printOrder.originalprice}</li>
+              <li><b>Discount:</b> ${Math.max(printOrder.originalprice - (printOrder.discountprice || printOrder.originalprice), 0)}</li>
+              <li><b>Final Paid Amount:</b> ${printOrder.discountprice || printOrder.originalprice}</li>
+              <li><b>Currency:</b> INR</li>
+            </ul>
+            <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
+          `,
+        },
+        "Payment success email",
+      );
+    }
 
     return res.status(200).json({
       success: true,
@@ -439,7 +446,7 @@ const verifyPayment = async (req, res) => {
 const paymentFailed = async (req, res) => {
   try {
     const userId = req.userId || req.user?._id;
-    const { printOrderId, razorpayOrderId } = req.body;
+    const { printOrderId, razorpayOrderId, status } = req.body;
 
     console.log("[paymentcontroller:paymentFailed] Request received", {
       userId: userId ? String(userId) : "",
@@ -486,6 +493,18 @@ const paymentFailed = async (req, res) => {
       });
     }
 
+    // Never overwrite a completed payment, and don't email the same failure twice
+    if (["paid", "failed"].includes(printOrder.paymentStatus)) {
+      console.log("[paymentcontroller:paymentFailed] Nothing to update", {
+        printOrderId,
+        paymentStatus: printOrder.paymentStatus,
+      });
+      return res.status(200).json({
+        success: true,
+        message: "Payment status unchanged",
+      });
+    }
+
     await Payment.findOneAndUpdate(
       { razorpayOrderId },
       { status: "failed" },
@@ -494,8 +513,9 @@ const paymentFailed = async (req, res) => {
 
     printOrder.paymentStatus = "failed";
     printOrder.razorpayOrderId = razorpayOrderId;
+    // The checkout creates a new order on retry, so this one must not be printed
+    printOrder.status = "Cancelled";
     await printOrder.save();
-    const user = await User.findById(printOrder.userid);
 
     console.log("[paymentcontroller:paymentFailed] Payment marked failed", {
       printOrderId,
@@ -521,12 +541,18 @@ const paymentFailed = async (req, res) => {
 
   <p>Please try the payment again.</p>
 `;
-    await resend.emails.send({
-      from: "PrintKart <payments@mybookhub.store>",
-      to: [user.email, "printkart0001@gmail.com"],
-      subject: "Payment Failed - PrintKart",
-      html: paymentFailedHtml,
-    });
+    // The user closed the payment popup themselves, so no email is needed
+    if (status !== "cancelled") {
+      await sendEmail(
+        {
+          from: "PrintKart <payments@mybookhub.store>",
+          to: [req.user?.email, "printkart0001@gmail.com"].filter(Boolean),
+          subject: "Payment Failed - PrintKart",
+          html: paymentFailedHtml,
+        },
+        "Payment failed email",
+      );
+    }
 
     return res.status(200).json({
       success: true,
