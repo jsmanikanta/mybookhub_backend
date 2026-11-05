@@ -64,51 +64,45 @@ const verifyCoupon = async (req, res) => {
     const discount = Number(couponDoc.discount) || 0;
     const now = new Date();
 
-    let existingStatus = await Couponstatus.findOne({
+    // usable: true = same user can use it many times; otherwise once per user
+    const canReuse = couponDoc.usable === true;
+
+    const existingStatus = await Couponstatus.findOne({
       userid: userId,
       code: couponCode,
     });
 
-    if (couponCode !== "MANAPRINTKART") {
-      if (existingStatus && existingStatus.status === true) {
-        console.log("[couponstatus:verifyCoupon] Coupon already used", {
-          userId: String(userId),
-          couponCode,
-        });
-        return res.status(200).json({
-          success: true,
-          status: "used",
-          message: "Coupon already used by this user",
-          data: {
-            code: couponCode,
-            discount,
-            usedDate: existingStatus.usedDate,
-          },
-        });
-      }
-    }
-
-    if (!existingStatus) {
-      existingStatus = await Couponstatus.create({
-        userid: userId,
-        code: couponCode,
-        status: true,
-        discountPercentage: discount,
-        usedDate: now,
-        userName: name,
-        userEmail: email,
-        userMobile: mobile,
+    if (!canReuse && existingStatus && existingStatus.status === true) {
+      console.log("[couponstatus:verifyCoupon] Coupon already used", {
+        userId: String(userId),
+        couponCode,
       });
-    } else {
-      existingStatus.status = true;
-      existingStatus.discountPercentage = discount;
-      existingStatus.usedDate = now;
-      existingStatus.userName = name;
-      existingStatus.userEmail = email;
-      existingStatus.userMobile = mobile;
-
-      await existingStatus.save();
+      return res.status(409).json({
+        success: false,
+        status: "used",
+        error: "Coupon already used by this user",
+        data: {
+          code: couponCode,
+          usedDate: existingStatus.usedDate,
+        },
+      });
     }
+
+    await Couponstatus.findOneAndUpdate(
+      { userid: userId, code: couponCode },
+      {
+        $set: {
+          status: true,
+          discountPercentage: discount,
+          usedDate: now,
+          userName: name,
+          userEmail: email,
+          userMobile: mobile,
+        },
+        $inc: { usedCount: 1 },
+      },
+      { upsert: true },
+    );
 
     console.log("[couponstatus:verifyCoupon] Coupon applied", {
       userId: String(userId),
@@ -130,7 +124,7 @@ const verifyCoupon = async (req, res) => {
             <h2>Hello ${name || "User"},</h2>
             <p>Your coupon has been applied successfully.</p>
             <p><b>Coupon Code:</b> ${couponCode}</p>
-            <p><b>Discount:</b> ₹${discount}</p>
+            <p><b>Discount:</b> ${discount}%</p>
             <p><b>Date:</b> ${now.toLocaleString()}</p>
             <p>Thank you for using <b>MyBookHub</b>.</p>
             <h4>For any queries, please contact us at <a href="mailto:support@mybookhub.store">support@mybookhub.store</a> .</h4>
@@ -143,6 +137,11 @@ const verifyCoupon = async (req, res) => {
       } catch (err) {
         console.error("Coupon email error:", err);
       }
+    } else {
+      console.warn("[couponstatus:verifyCoupon] Coupon email skipped", {
+        hasEmail: Boolean(email),
+        hasResendKey: Boolean(resend),
+      });
     }
 
     return res.status(200).json({
@@ -193,7 +192,7 @@ const applyCoupon = async (amount, couponCode, userId) => {
       return { discount: 0, finalAmount: amount };
     }
 
-    if (normalizedCode !== "MANAPRINTKART") {
+    if (couponDoc.usable !== true) {
       const used = await Couponstatus.findOne({
         userid: userId,
         code: normalizedCode,
